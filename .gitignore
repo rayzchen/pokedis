@@ -2,3 +2,4 @@
 .token*
 stop
 restart
+db.json
