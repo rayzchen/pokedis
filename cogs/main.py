@@ -1,7 +1,7 @@
 from discord.ext import commands, tasks
 from discord_slash import SlashContext
-import os
 from utils import send_embed
+import os
 
 class Main(commands.Cog):
     def __init__(self, bot):
@@ -25,11 +25,13 @@ class Main(commands.Cog):
             await self.bot.close()
 
     @commands.command()
+    @commands.has_permissions(manage_guild=True)
     async def restart(self, ctx: SlashContext):
         open("restart", "w+").close()
         await send_embed(ctx, "", "Restarting")
-        
+    
     @commands.command()
+    @commands.has_permissions(manage_guild=True)
     async def stop(self, ctx: SlashContext):
         open("stop", "w+").close()
         await send_embed(ctx, "", "Stopping")

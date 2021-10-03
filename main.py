@@ -1,14 +1,22 @@
 from keep_alive import keep_alive
-import os
 import sys
 import threading
 import importlib
+
+def reset_modules():
+    pending = []
+    for module in sys.modules:
+        if module.startswith("utils.") or module.startswith("cogs") or module == "bot":
+            pending.append(module)
+    print(pending)
+    for mod in pending:
+        sys.modules.pop(mod)
 
 t = threading.Thread(target=keep_alive, daemon=True)
 t.start()
 
 while True:
-    sys.modules.pop("bot", None)
+    reset_modules()
     bot = importlib.import_module("bot")
     cont = bot.run()
     if not cont:
