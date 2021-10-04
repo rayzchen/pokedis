@@ -3,7 +3,8 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
     create_actionrow, create_button, wait_for_component)
 from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, database
+from utils import send_embed, create_embed, database, check_start, data
+import copy
 
 start_text = [
     ["Hello there! Welcome to the", "world of POKéMON!"],
@@ -29,7 +30,7 @@ class User(commands.Cog):
         guild_ids=[894254591858851871])
     async def start(self, ctx: SlashContext):
         if ctx.author.id in database.db["users"]:
-            await send_embed("Error", "You have already started PokéDis!")
+            await send_embed(ctx, "Error", "You have already started PokéDis!")
             return
         buttons = create_actionrow(
             create_button(style=ButtonStyle.green, label="Talk"))
@@ -60,14 +61,42 @@ class User(commands.Cog):
         embed = create_embed("Start", "Use /help for help with commands.")
         await button_ctx.edit_origin(embed=embed, components=[])
         
+        charmander = data.gen_pokemon(176, 5, ["fire", "fire"], [10, 45, 0, 0], [35, 40, 0, 0], [39, 52, 32, 50, 65])
         user = {
             "inventory": [],
             "pc": [{"name": "potion", "count": 1}],
             "rival": "Gary",
-            "pokemon": [],
+            "pokemon": [charmander],
             "badges": [],
         }
         database.db["users"][ctx.author.id] = user
+    
+    @cog_ext.cog_slash(
+        name="use", description="Use an item in your inventory",
+        guild_ids=[894254591858851871])
+    @check_start
+    async def use(self, ctx: SlashContext, item):
+        name = item.rstrip().lstrip().lower()
+        if name not in data.items:
+            await send_embed(ctx, "Error", f"Item {name} does not exist!")
+            return
+
+        inv = database.db["users"][ctx.author.id]["inventory"]
+        remove = -1
+        for i, item in enumerate(inv):
+            if item["name"] == name:
+                item["count"] -= 1
+                if item["count"] == 0:
+                    remove = i
+                break
+        else:
+            await send_embed(ctx, "Error", f"You do not have a '__{item}__'!")
+            return
+        if remove != -1:
+            inv.pop(remove)
+        database.db["users"][ctx.author.id]["inventory"] = inv
+
+        await send_embed(ctx, "Item", f"Used '__{item}__'")
 
 def setup(bot):
     bot.add_cog(User(bot))

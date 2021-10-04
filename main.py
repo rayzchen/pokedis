@@ -12,7 +12,8 @@ def reset_modules():
     for mod in pending:
         sys.modules.pop(mod)
 
-t = threading.Thread(target=keep_alive, daemon=True)
+t = threading.Thread(target=keep_alive)
+t.daemon = True
 t.start()
 
 while True:
@@ -21,4 +22,3 @@ while True:
     cont = bot.run()
     if not cont:
         break
-
