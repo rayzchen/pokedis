@@ -24,4 +24,4 @@ def stop():
     return flask.redirect("/")
 
 def keep_alive():
-    app.run()
+    app.run(host="0.0.0.0", port=5000)
