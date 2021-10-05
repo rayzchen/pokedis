@@ -9,7 +9,6 @@ if sys.platform.startswith("win"):
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
-import discord
 from discord.ext import commands
 from discord_slash import SlashCommand
 

@@ -8,7 +8,6 @@ def reset_modules():
     for module in sys.modules:
         if module.startswith("utils.") or module.startswith("cogs") or module == "bot":
             pending.append(module)
-    print(pending)
     for mod in pending:
         sys.modules.pop(mod)
 

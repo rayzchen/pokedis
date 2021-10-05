@@ -1,0 +1,4 @@
+{
+    "176": {"name": "Charmander", "dex": 4, "base": [39, 52, 43, 50, 65], "types": ["fire", "fire"], "catch": 45, "xp_yield": 65, "moves": [33, 39], "learnset": {"9": 52, "15": 43, "22": 99, "30": 163, "38": 53, "46": 83}, "growth": 3, "tm": 48907316917375107},
+    "165": {"name": "Rattata", "dex": 19, "base": [30, 56, 35, 25, 72], "types": ["normal", "normal"], "catch": 255, "xp_yield": 57, "moves": [33, 39], "learnset": {"7": 98, "14": 158, "23": 116, "34": 162}, "growth": 0, "tm": 418932801455120}
+}

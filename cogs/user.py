@@ -3,8 +3,7 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
     create_actionrow, create_button, wait_for_component)
 from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, database, check_start, data
-import copy
+from utils import send_embed, create_embed, database, check_start, data, make_hp
 
 start_text = [
     ["Hello there! Welcome to the", "world of POKéMON!"],
@@ -61,7 +60,7 @@ class User(commands.Cog):
         embed = create_embed("Start", "Use /help for help with commands.")
         await button_ctx.edit_origin(embed=embed, components=[])
         
-        charmander = data.gen_pokemon(176, 5, ["fire", "fire"], [10, 45, 0, 0], [35, 40, 0, 0], [39, 52, 32, 50, 65])
+        charmander = data.gen_pokemon(176, 5)
         user = {
             "inventory": [],
             "pc": [{"name": "potion", "count": 1}],
@@ -97,6 +96,17 @@ class User(commands.Cog):
         database.db["users"][ctx.author.id]["inventory"] = inv
 
         await send_embed(ctx, "Item", f"Used '__{item}__'")
+    
+    @cog_ext.cog_slash(
+        name="pokemon", description="View your Pokémon",
+        guild_ids=[894254591858851871])
+    @check_start
+    async def pokemon(self, ctx: SlashContext):
+        text = ""
+        for poke in database.db["users"][ctx.author.id]["pokemon"]:
+            text += f"**{data.pokename(poke['species'])}** __Level {poke['level']}__\n**{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\n\n"
+        text += f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon"
+        await send_embed(ctx, "Pokémon", text)
 
 def setup(bot):
     bot.add_cog(User(bot))
