@@ -16,14 +16,34 @@ def calc_hp(base, ivs, ev, level):
 def calc_stat(base, iv, ev, level):
     return math.floor(((base + iv) * 2 + math.floor(math.sqrt(ev) / 4)) * level / 100) + 5
 
-def calc_exp(level, offset=0):
-    return int(6/5 * level ** 3 - 15 * level ** 2 + 100 * level - 140)
+def calc_exp(level, growth, offset=0):
+    if growth == 0:
+        return level ** 3
+    if growth == 3:
+        return int(6/5 * level ** 3 - 15 * level ** 2 + 100 * level - 140)
+    if growth == 4:
+        return int(4/5 * level ** 3)
+    if growth == 5:
+        return int(5/4 * level ** 3)
 
-def gen_species(species, level, types, moves, pp, base):
-    poke = {"species": species, "level": level, "status": [], "types": types.copy(), "moves": moves, "ot": 0, "exp": calc_exp(level), "ev": [0, 0, 0, 0, 0], "iv": [random.randint(0, 15) for _ in range(4)], "pp": pp}
-    poke["stats"] = {"hp": calc_hp(base[0], poke["iv"], 0, level), "atk": calc_stat(base[1], poke["iv"][0], 0, level), "def": calc_stat(base[2], poke["iv"][1], 0, level), "spec": calc_stat(base[3], poke["iv"][2], 0, level), "spd": calc_stat(base[4], poke["iv"][3], 0, level)}
+def calc_exp_gain(trainer, poke1, poke2, wild):
+    a = 1 if wild else 1.5
+    t = 1.5 if trainer == poke1["ot"] else 1
+    b = all_pokemon_data[poke2["species"]]["xp_yield"]
+    return int(a * t * b * poke2["level"] / 7)
+
+def gen_species(species, level, growth, types, moves, pp, base):
+    poke = {"species": species, "level": level, "status": [], "types": types.copy(), "moves": moves, "ot": 0, "exp": calc_exp(level, growth), "ev": [0, 0, 0, 0, 0], "iv": [random.randint(0, 15) for _ in range(4)], "pp": pp}
+    poke["stats"] = {"hp": calc_hp(base[0], poke["iv"], poke["ev"][0], level), "atk": calc_stat(base[1], poke["iv"][0], poke["ev"][1], level), "def": calc_stat(base[2], poke["iv"][1], poke["ev"][2], level), "spec": calc_stat(base[3], poke["iv"][2], poke["ev"][3], level), "spd": calc_stat(base[4], poke["iv"][3], poke["ev"][4], level)}
     poke["hp"] = poke["stats"]["hp"]
     return poke
+
+def calc_stats(poke):
+    base = all_pokemon_data[str(poke["species"])]["base"]
+    level = poke["level"]
+    diff = poke["stats"]["hp"] - poke["hp"]
+    poke["stats"] = {"hp": calc_hp(base[0], poke["iv"], poke["ev"][0], level), "atk": calc_stat(base[1], poke["iv"][0], poke["ev"][1], level), "def": calc_stat(base[2], poke["iv"][1], poke["ev"][2], level), "spec": calc_stat(base[3], poke["iv"][2], poke["ev"][3], level), "spd": calc_stat(base[4], poke["iv"][3], poke["ev"][4], level)}
+    poke["hp"] = poke["stats"]["hp"] - diff
 
 def gen_pokemon(species, level):
     species = str(species)
@@ -31,7 +51,7 @@ def gen_pokemon(species, level):
     moves = moves + [0] * (4 - len(moves))
     pp = [all_move_data[str(move)]["pp"] for move in all_pokemon_data[species]["moves"]]
     pp += [0] * (4 - len(pp))
-    poke = gen_species(species, level, all_pokemon_data[species]["types"], moves, pp, all_pokemon_data[species]["base"])
+    poke = gen_species(species, level, all_pokemon_data[species]["growth"], all_pokemon_data[species]["types"], moves, pp, all_pokemon_data[species]["base"])
     
     for i in range(1, level + 1):
         if str(i) in all_pokemon_data[species]["learnset"]:
@@ -71,6 +91,19 @@ def pokename(idx):
 
 def movename(idx):
     return all_move_data[str(idx)]["name"]
+
+def get_level(exp, growth):
+    l = level_exp[growth]
+    if exp in l:
+        return l.index(exp)
+    l.append(exp)
+    l.sort()
+    index = l.index(exp)
+    l.remove(exp)
+    return index
+
+level_exp = [[calc_exp(i, j) for i in range(1, 101)] for j in (0, 3, 4, 5)]
+level_exp = [level_exp[0], None, None, *level_exp[1:]]
 
 items = ["pokéball", "potion", "antidote", "paralyz", "burn"]
 

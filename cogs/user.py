@@ -104,7 +104,10 @@ class User(commands.Cog):
     async def pokemon(self, ctx: SlashContext):
         text = ""
         for poke in database.db["users"][ctx.author.id]["pokemon"]:
-            text += f"**{data.pokename(poke['species'])}** __Level {poke['level']}__\n**{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\n\n"
+            poke["level"] = data.get_level(poke["exp"], data.all_pokemon_data[str(poke["species"])]["growth"])
+            lower = data.level_exp[data.all_pokemon_data[str(poke["species"])]["growth"]][poke["level"] - 1]
+            upper = data.level_exp[data.all_pokemon_data[str(poke["species"])]["growth"]][poke["level"]]
+            text += f"**{data.pokename(poke['species'])}** __Level {poke['level']}__\n**{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\nATK: {poke['stats']['atk']} DEF: {poke['stats']['def']}\nSPEC: {poke['stats']['spec']} SPD: {poke['stats']['spd']}\nEXP: {poke['exp'] - lower} / {upper - lower}\n\n"
         text += f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon"
         await send_embed(ctx, "Pokémon", text)
 
