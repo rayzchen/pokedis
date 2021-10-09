@@ -1,4 +1,5 @@
 {
-    "33": {"name": "Tackle", "pp": 35, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "normal"},
+    "16": {"name": "Gust", "pp": 35, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "flying"},
+    "33": {"name": "Tackle", "pp": 35, "power": 40, "acc": 2, "effect": 0, "special": 0, "type": "normal"},
     "39": {"name": "Tail Whip", "pp": 30, "power": 0, "acc": 100, "effect": 1, "special": 0, "type": "normal"}
 }

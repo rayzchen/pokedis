@@ -6,6 +6,7 @@ from discord_slash.model import ButtonStyle
 from utils import create_embed, check_start, database, data, make_hp
 import asyncio
 import random
+import math
 
 effectiveness = {
     0: "It was not effective at all!",
@@ -29,6 +30,7 @@ class User(commands.Cog):
         poke2 = data.gen_pokemon(165, 2)
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
+        print(poke2)
 
         caption = "What would you like to do?"
         def get_text():
@@ -37,6 +39,7 @@ class User(commands.Cog):
         embed = create_embed("Battle", get_text())
         buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
         await ctx.send(embed=embed, components=[buttons])
+        run_count = 0
         while True:
             button_ctx = await wait_for_component(self.bot, components=buttons)
 
@@ -63,48 +66,108 @@ class User(commands.Cog):
                     defname = name1
                     atkpoke = poke2
                     defpoke = poke1
-                
                 caption = f"{atkname} uses __{button_ctx.component['label']}__!"
-                fields = [caption]
-                outcome = self.fight(fields, atkname, defname, atkpoke, defpoke, selected)
-                caption = fields[0]
-                await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
-                await asyncio.sleep(2)
-                if outcome != 0:
-                    win = outcome == 2
-                    if win:
-                        caption = f"{defname} fainted!"
-                    else:
-                        caption = f"{atkname} fainted!"
+                
+                if random.randint(0, 99) > data.all_move_data[str(selected)]["acc"]:
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
                     await asyncio.sleep(2)
-                    break
+                    caption = f"{atkname} missed!"
+                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                    await asyncio.sleep(2)
+                else:
+                    fields = [caption]
+                    outcome = self.fight(fields, atkname, defname, atkpoke, defpoke, selected)
+                    caption = fields[0]
+                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                    await asyncio.sleep(2)
+                    if outcome != 0:
+                        win = outcome == 2
+                        if win:
+                            caption = f"{defname} fainted!"
+                        else:
+                            caption = f"{atkname} fainted!"
+                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                        await asyncio.sleep(2)
+                        break
                 
                 caption = f"{defname} strikes back fiercely!"
                 await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
                 await asyncio.sleep(2)
-                selected = defpoke["moves"][random.randint(0, 3 - poke2["moves"].count(0))]
+                selected = defpoke["moves"][random.randint(0, 3 - defpoke["moves"].count(0))]
                 caption = f"{defname} uses __{data.all_move_data[str(selected)]['name']}__!"
-                fields = [caption]
-                outcome = self.fight(fields, defname, atkname, defpoke, atkpoke, selected, swp=2)
-                caption = fields[0]
-                await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
-                await asyncio.sleep(2)
-                if outcome != 0:
-                    win = outcome == 1
-                    if win:
-                        caption = f"{defname} fainted!"
-                    else:
-                        caption = f"{atkname} fainted!"
+
+                if random.randint(0, 99) > data.all_move_data[str(selected)]["acc"]:
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
                     await asyncio.sleep(2)
-                    break
+                    caption = f"{defname} missed!"
+                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                    await asyncio.sleep(2)
+                else:
+                    fields = [caption]
+                    outcome = self.fight(fields, defname, atkname, defpoke, atkpoke, selected, swp=2)
+                    caption = fields[0]
+                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                    await asyncio.sleep(2)
+                    if outcome != 0:
+                        win = outcome == 1
+                        if win:
+                            caption = f"{defname} fainted!"
+                        else:
+                            caption = f"{atkname} fainted!"
+                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                        await asyncio.sleep(2)
+                        break
 
                 caption = "What would you like to do?"
             elif action == "Run":
-                caption = "Ran away successfully!"
-                await button_ctx.edit_origin(embed=create_embed("Battle", get_text()), components=[])
-                return
+                auto = math.floor(poke2["stats"]["spd"] / 4) % 256
+                if auto == 0:
+                    escape = True
+                else:
+                    odds = math.floor(poke1["stats"]["spd"] * 32 / auto) + run_count * 30
+                    if odds > 255:
+                        escape = True
+                    else:
+                        escape = random.randint(0, 255) < odds
+                print(odds)
+                if escape:
+                    caption = "Got away safely!"
+                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text()), components=[])
+                    return
+                else:
+                    caption = "Not fast enough!"
+                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text()), components=[])
+                    await asyncio.sleep(2)
+                    run_count += 1
+                    
+                    caption = f"{name2} strikes!"
+                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                    await asyncio.sleep(2)
+
+                    selected = poke2["moves"][random.randint(0, 3 - poke2["moves"].count(0))]
+                    caption = f"{name2} uses __{data.all_move_data[str(selected)]['name']}__!"
+
+                    if random.randint(0, 99) > data.all_move_data[str(selected)]["acc"]:
+                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                        await asyncio.sleep(2)
+                        caption = f"{name2} missed!"
+                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                        await asyncio.sleep(2)
+                    else:
+                        fields = [caption]
+                        outcome = self.fight(fields, name2, name1, poke2, poke1, selected, swp=2)
+                        caption = fields[0]
+                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                        await asyncio.sleep(2)
+                        if outcome != 0:
+                            win = outcome == 1
+                            if win:
+                                caption = f"{name2} fainted!"
+                            else:
+                                caption = f"{name1} fainted!"
+                            await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()))
+                            await asyncio.sleep(2)
+                            break
             
             buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
             await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()), components=[buttons])
@@ -117,12 +180,12 @@ class User(commands.Cog):
             await asyncio.sleep(2)
 
             lvl = data.get_level(poke1["exp"], data.all_pokemon_data[str(poke1["species"])]["growth"])
+            for i in range(5):
+                poke1["ev"][i] += data.all_pokemon_data[str(poke2["species"])]["base"][i]
             if lvl != poke1["level"]:
                 caption = f"{name1} levelled up! {poke1['level']} -> {lvl}\n"
                 poke1["level"] = lvl
                 data.calc_stats(poke1)
-                for i in range(5):
-                    poke1["ev"][i] += data.all_pokemon_data[str(poke2["species"])]["base"][i]
                 caption += f"ATK -> {poke1['stats']['atk']} DEF -> {poke1['stats']['def']}\nSPEC -> {poke1['stats']['spec']} SPD -> {poke1['stats']['spd']}"
                 await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text()), components=[])
                 await asyncio.sleep(4)

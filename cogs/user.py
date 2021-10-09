@@ -4,6 +4,8 @@ from discord_slash.utils.manage_components import (
     create_actionrow, create_button, wait_for_component)
 from discord_slash.model import ButtonStyle
 from utils import send_embed, create_embed, database, check_start, data, make_hp
+import asyncio
+import math
 
 start_text = [
     ["Hello there! Welcome to the", "world of POKéMON!"],
@@ -96,6 +98,38 @@ class User(commands.Cog):
         database.db["users"][ctx.author.id]["inventory"] = inv
 
         await send_embed(ctx, "Item", f"Used '__{item}__'")
+    
+    @cog_ext.cog_slash(
+        name="pc", description="Store and withdraw items from Bill's PC", guild_ids=[894254591858851871])
+    async def pc(self, ctx: SlashContext):
+        page = 1
+        button_ctx = None
+        row2 = create_actionrow(
+            create_button(ButtonStyle.green, "Deposit"),
+            create_button(ButtonStyle.green, "Withdraw"))
+        while True:
+            viewing = database.db["users"][ctx.author.id]["pc"][(page - 1) * 10: page * 10]
+            length = math.ceil(len(database.db['users'][ctx.author.id]['pc']) / 10)
+            embed = create_embed("Bill's PC", "Here are your current items: \n\n" + "\n".join(["__" + item["name"].capitalize() + "__ **(x" + str(item["count"]) + ")**" for item in viewing]), footer=f"Page {page} of {length}")
+            buttons = create_actionrow(
+                create_button(ButtonStyle.green, "◀", disabled=page == 1),
+                create_button(ButtonStyle.green, "▶", disabled=page == length))
+            if button_ctx is None:
+                msg = await ctx.send(embed=embed, components=[buttons, row2])
+            else:
+                await button_ctx.edit_origin(embed=embed, components=[buttons, row2])
+            try:
+                button_ctx = await wait_for_component(self.bot, components=[buttons, row2], timeout=60)
+            except asyncio.TimeoutError:
+                buttons = create_actionrow(
+                    create_button(ButtonStyle.green, "◀", disabled=True),
+                    create_button(ButtonStyle.green, "▶", disabled=True))
+                await msg.edit(components=[buttons])
+                break
+            if button_ctx.component["label"] == "◀":
+                page -= 1
+            elif button_ctx.component["label"] == "▶":
+                page += 1
     
     @cog_ext.cog_slash(
         name="pokemon", description="View your Pokémon",
