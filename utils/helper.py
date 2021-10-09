@@ -1,6 +1,9 @@
 from . import database
 import discord
 import inspect
+import asyncio
+from discord_slash.utils.manage_components import wait_for_component
+# from discord_slash.model import SlashMessage
 
 def get_prefix(bot, ctx):
     return "p!"
@@ -13,12 +16,18 @@ def create_embed(title, description, color=0x00CCFF, footer=""):
 async def send_embed(ctx, title, description, color=0x00CCFF, footer="", **kwargs):
     await ctx.send(embed=create_embed(title, description, color, footer), **kwargs)
 
+class EndCommand(Exception):
+    pass
+
 def check_start(func):
     async def inner(self, ctx, *args, **kwargs):
         if ctx.author.id not in database.db["users"]:
             await send_embed(ctx, "Error", "You have not started your Pokémon journey!")
             return
-        await func(self, ctx, *args, **kwargs)
+        try:
+            await func(self, ctx, *args, **kwargs)
+        except EndCommand:
+            pass
     inner.__annotations__ = func.__annotations__
     inner.__signature__ = inspect.signature(func)
     return inner
@@ -86,3 +95,24 @@ def make_hp(amount):
     else:
         text += emojis[color * 6 + 2]
     return text
+
+async def custom_wait(bot, message):
+    components = message.components
+    try:
+        button_ctx = await wait_for_component(bot, components=components, timeout=60)
+    except asyncio.TimeoutError:
+        if message.embeds[0].title == "Battle":
+            await message.reply(embed=create_embed("Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved."))
+            print(components)
+            if isinstance(components, dict):
+                for component in components["components"]:
+                    component["disabled"] = True
+                await message.edit(components=[components])
+            else:
+                for row in components:
+                    for component in row["components"]:
+                        component["disabled"] = True
+                await message.edit(components=components)
+            raise EndCommand
+        raise
+    return button_ctx
