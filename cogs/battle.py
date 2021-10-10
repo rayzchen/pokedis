@@ -23,7 +23,7 @@ class User(commands.Cog):
     
     @commands.Cog.listener()
     async def on_message_delete(self, message):
-        if len(message.embeds) and message.embeds[0].title == "Battle":
+        if message.author.id == self.bot.user.id and len(message.embeds) and message.embeds[0].title == "Battle":
             await send_embed(message.channel, "Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.")
     
     @cog_ext.cog_slash(

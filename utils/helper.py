@@ -102,7 +102,10 @@ async def custom_wait(bot, message):
         button_ctx = await wait_for_component(bot, components=components, timeout=60)
     except asyncio.TimeoutError:
         if message.embeds[0].title == "Battle":
-            await message.reply(embed=create_embed("Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved."))
+            try:
+                await message.reply(embed=create_embed("Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved."))
+            except:
+                raise EndCommand
             print(components)
             if isinstance(components, dict):
                 for component in components["components"]:

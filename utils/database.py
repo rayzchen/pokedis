@@ -123,6 +123,11 @@ class LiveList:
     
     def count(self, item):
         return self.l.count(item)
+    
+    def pop(self, index):
+        item = self.l.pop(index)
+        self.update()
+        return item
 
     def tolist(self):
         l = []

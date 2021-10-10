@@ -105,7 +105,7 @@ def get_level(exp, growth):
 level_exp = [[calc_exp(i, j) for i in range(1, 101)] for j in (0, 3, 4, 5)]
 level_exp = [level_exp[0], None, None, *level_exp[1:]]
 
-items = ["pokéball", "potion", "antidote", "paralyz", "burn"]
+items = ["Poké Ball", "Potion", "Antidote", "Paralyz Heal", "Burn Heal"]
 
 example_poke = gen_pokemon(176, 34)
 print(example_poke)
