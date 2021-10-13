@@ -34,7 +34,7 @@ def calc_exp(level, growth, offset=0):
 def calc_exp_gain(trainer, poke1, poke2, wild):
     a = 1 if wild else 1.5
     t = 1.5 if trainer == poke1["ot"] else 1
-    b = all_pokemon_data[poke2["species"]]["xp_yield"]
+    b = all_pokemon_data[str(poke2["species"])]["xp_yield"]
     return int(a * t * b * poke2["level"] / 7)
 
 def gen_species(species, level, growth, types, moves, pp, base):
