@@ -82,7 +82,7 @@ class User(commands.Cog):
         message = await ctx.send(embed=embed, components=[buttons])
         run_count = 0
         while True:
-            button_ctx = await custom_wait(self.bot, message)
+            button_ctx = await custom_wait(self.bot, message, [buttons])
 
             action = button_ctx.component["label"]
             if action == "Fight":
@@ -90,7 +90,7 @@ class User(commands.Cog):
                 moves = {data.movename(move): move for move in poke1["moves"] if move != 0}
                 caption = "Choose a move."
                 await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption)), components=buttons)
-                button_ctx = await custom_wait(self.bot, message)
+                button_ctx = await custom_wait(self.bot, message, buttons)
                 selected = moves[button_ctx.component["label"]]
 
                 caption = f"{name1} has higher speed!\nIt attacks first!"
@@ -182,7 +182,7 @@ class User(commands.Cog):
                     caption = f"{name1} is trying to learn **{movedata['name']}**, but it already knows 4 moves!\nWhich move would you like it to forget?"
                     components = [create_actionrow(create_button(ButtonStyle.green, f"{i} - " + data.all_move_data[str(move)]["name"])) for i, move in enumerate(poke1["moves"])]
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)), components=components)
-                    button_ctx = await custom_wait(self.bot, message)
+                    button_ctx = await custom_wait(self.bot, message, components)
                     forget = int(button_ctx.component["label"][0]) - 1
                     poke1["moves"][forget] = move
                     caption = f"{name1} forgot **{button_ctx.component['label'][4:]}** and learnt **{movedata['name']}**!"

@@ -1,6 +1,11 @@
 import math
 import random
 import json
+from .database import db
+if "users" not in db:
+    db["users"] = {}
+if "servers" not in db:
+    db["servers"] = {}
 
 with open("utils/datafiles/pokedata.json") as f:
     all_pokemon_data = json.loads(f.read())

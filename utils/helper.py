@@ -96,8 +96,7 @@ def make_hp(amount):
         text += emojis[color * 6 + 2]
     return text
 
-async def custom_wait(bot, message):
-    components = message.components
+async def custom_wait(bot, message, components):
     try:
         button_ctx = await wait_for_component(bot, components=components, timeout=60)
     except asyncio.TimeoutError:
