@@ -56,7 +56,7 @@ def gen_pokemon(species, level):
     moves = moves + [0] * (4 - len(moves))
     pp = [all_move_data[str(move)]["pp"] for move in all_pokemon_data[species]["moves"]]
     pp += [0] * (4 - len(pp))
-    poke = gen_species(species, level, all_pokemon_data[species]["growth"], all_pokemon_data[species]["types"], moves, pp, all_pokemon_data[species]["base"])
+    poke = gen_species(int(species), level, all_pokemon_data[species]["growth"], all_pokemon_data[species]["types"], moves, pp, all_pokemon_data[species]["base"])
     
     for i in range(1, level + 1):
         if str(i) in all_pokemon_data[species]["learnset"]:

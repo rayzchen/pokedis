@@ -36,7 +36,6 @@ class User(commands.Cog):
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
 
-        caption = "What would you like to do?"
         def get_text(caption):
             return f"{name1} **[Level {poke1['level']}]**\n**{poke1['hp']} / {poke1['stats']['hp']}**\n{make_hp(poke1['hp'] / poke1['stats']['hp'])}\n\n{name2} **[Level {poke2['level']}]**\n**{poke2['hp']} / {poke2['stats']['hp']}**\n{make_hp(poke2['hp'] / poke2['stats']['hp'])}\n\n{caption}"
         async def fight(atkname, defname, atkpoke, defpoke, selected, winning, caption):
@@ -77,9 +76,17 @@ class User(commands.Cog):
                     return 1, win
             return False
 
+        caption = f"A wild **{data.pokename(poke2['species'])}** appeared!"
+        msg = await ctx.send(embed=create_embed("Battle", get_text(caption)))
+        await asyncio.sleep(2)
+        caption = f"Go, **{data.pokename(poke1['species'])}**!"
+        msg = await ctx.send(embed=create_embed("Battle", get_text(caption)))
+        await asyncio.sleep(2)
+        caption = "What would you like to do?"
+
         embed = create_embed("Battle", get_text(caption))
         buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
-        message = await ctx.send(embed=embed, components=[buttons])
+        message = await msg.edit(embed=embed, components=[buttons])
         run_count = 0
         while True:
             button_ctx = await custom_wait(self.bot, message, [buttons])
