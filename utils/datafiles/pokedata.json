@@ -1,6 +1,7 @@
 {
-    "36": {"name": "Pidgey", "dex": 16, "base": [40, 45, 40, 35, 56], "types": ["flying", "flying"], "catch": 255, "xp_yield": 55, "moves": [16], "learnset": {"7": 28, "12": 98, "19": 18, "28": 17, "36": 97, "44": 119}, "growth": 3, "tm": 11927536529381416},
-    "165": {"name": "Rattata", "dex": 19, "base": [30, 56, 35, 25, 72], "types": ["normal", "normal"], "catch": 255, "xp_yield": 57, "moves": [33, 39], "learnset": {"7": 98, "14": 158, "23": 116, "34": 162}, "growth": 0, "tm": 837865602910240},
-    "176": {"name": "Charmander", "dex": 4, "base": [39, 52, 43, 50, 65], "types": ["fire", "fire"], "catch": 45, "xp_yield": 65, "moves": [33, 39], "learnset": {"9": 52, "15": 43, "22": 99, "30": 163, "38": 53, "46": 83}, "growth": 3, "tm": 97814633834750214},
-    "177": {"name": "Squirtle", "dex": 7, "base": [44, 48, 65, 50, 43], "types": ["water", "water"], "catch": 45, "xp_yield": 66, "moves": [33, 39], "learnset": {"8": 145, "15": 55, "22": 44, "28": 110, "35": 130, "42": 56}, "growth": 3, "tm": 19983039884986406}
+    "1": {"name": "Bulbasaur", "base": [45, 49, 49, 65, 45], "types": ["grass", "poison"], "catch": 45, "xp_yield": 64, "moves": [33, 45], "learnset": {"7": 73, "13": 22, "20": 77, "27": 75, "34": 74, "41": 79, "48": 76}, "growth": 3, "tm": 5312900346415152},
+    "4": {"name": "Charmander", "base": [39, 52, 43, 50, 65], "types": ["fire", "fire"], "catch": 45, "xp_yield": 65, "moves": [10, 45], "learnset": {"9": 52, "15": 43, "22": 99, "30": 163, "38": 53, "46": 83}, "growth": 3, "tm": 97814633834750214},
+    "7": {"name": "Squirtle", "base": [44, 48, 65, 50, 43], "types": ["water", "water"], "catch": 45, "xp_yield": 66, "moves": [33, 39], "learnset": {"8": 145, "15": 55, "22": 44, "28": 110, "35": 130, "42": 56}, "growth": 3, "tm": 19983039884986406},
+    "16": {"name": "Pidgey", "base": [40, 45, 40, 35, 56], "types": ["flying", "flying"], "catch": 255, "xp_yield": 55, "moves": [16], "learnset": {"7": 28, "12": 98, "19": 18, "28": 17, "36": 97, "44": 119}, "growth": 3, "tm": 11927536529381416},
+    "19": {"name": "Rattata", "base": [30, 56, 35, 25, 72], "types": ["normal", "normal"], "catch": 255, "xp_yield": 57, "moves": [33, 39], "learnset": {"7": 98, "14": 158, "23": 116, "34": 162}, "growth": 0, "tm": 837865602910240}
 }

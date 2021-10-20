@@ -32,9 +32,12 @@ class User(commands.Cog):
     @check_start
     async def battle(self, ctx: SlashContext):
         poke1 = database.db["users"][ctx.author.id]["pokemon"][0]
-        poke2 = data.gen_pokemon(165, 2)
+        poke2 = data.gen_pokemon(19, 2)
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
+
+        poke1["stat_change"] = [0, 0, 0, 0, 0]
+        poke2["stat_change"] = [0, 0, 0, 0, 0]
 
         def get_text(caption):
             return f"{name1} **[Level {poke1['level']}]**\n**{poke1['hp']} / {poke1['stats']['hp']}**\n{make_hp(poke1['hp'] / poke1['stats']['hp'])}\n\n{name2} **[Level {poke2['level']}]**\n**{poke2['hp']} / {poke2['stats']['hp']}**\n{make_hp(poke2['hp'] / poke2['stats']['hp'])}\n\n{caption}"
@@ -61,7 +64,23 @@ class User(commands.Cog):
                         outcome = 1
                 else:
                     caption += "\nSpecial effect!"
-                    print(2)
+                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
+                    await asyncio.sleep(2)
+                    spec_move = data.special_move_data[str(selected)]
+                    if "foe" in spec_move["affects"]:
+                        affected = (defpoke, defname)
+                    else:
+                        affected = (atkpoke, atkname)
+                    affected[0]["stat_change"][spec_move["stat"]] += spec_move["change"]
+                    caption = f"{affected[1]}'s **{data.stat_names[spec_move['stat']]}** stat was "
+                    if spec_move["change"] > 0:
+                        caption += "raised!"
+                    else:
+                        caption += "lowered!"
+                    if affected[0]["stat_change"][spec_move["stat"]] > list(affected[0]["stats"].values())[spec_move["stat"]]:
+                        caption = "It had no effect!"
+                        affected[0]["stat_change"][spec_move["stat"]] = list(affected[0]["stats"].values())[spec_move["stat"]]
+                    print(affected[0]["stat_change"])
                 await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
                 await asyncio.sleep(2)
                 if outcome == 1:
@@ -69,7 +88,6 @@ class User(commands.Cog):
                     if win:
                         caption = f"{defname} fainted!"
                     else:
-                        print(win)
                         caption = f"{atkname} fainted!"
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
                     await asyncio.sleep(2)
@@ -93,7 +111,7 @@ class User(commands.Cog):
 
             action = button_ctx.component["label"]
             if action == "Fight":
-                buttons = [create_actionrow(create_button(ButtonStyle.green, label=data.movename(move))) for move in poke1["moves"] if move != 0]
+                buttons = [create_actionrow(*[create_button(ButtonStyle.green, label=data.movename(move)) for move in poke1["moves"] if move != 0])]
                 moves = {data.movename(move): move for move in poke1["moves"] if move != 0}
                 caption = "Choose a move."
                 await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption)), components=buttons)
@@ -165,6 +183,7 @@ class User(commands.Cog):
             buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
             await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)), components=[buttons])
         
+        del poke1["stat_change"]
         if outcome[1]:
             gain = data.calc_exp_gain(ctx.author.id, poke1, poke2, True)
             poke1["exp"] += gain
@@ -182,22 +201,23 @@ class User(commands.Cog):
                 caption += f"ATK -> {poke1['stats']['atk']} DEF -> {poke1['stats']['def']}\nSPEC -> {poke1['stats']['spec']} SPD -> {poke1['stats']['spd']}"
                 await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)), components=[])
                 await asyncio.sleep(4)
-            if str(lvl) in data.all_pokemon_data[str(poke1["species"])]["learnset"]:
-                move = data.all_pokemon_data[str(poke1["species"])]["learnset"][str(lvl)]
-                movedata = data.all_move_data[str(move)]
-                if 0 not in poke1["moves"]:
-                    caption = f"{name1} is trying to learn **{movedata['name']}**, but it already knows 4 moves!\nWhich move would you like it to forget?"
-                    components = [create_actionrow(create_button(ButtonStyle.green, f"{i} - " + data.all_move_data[str(move)]["name"])) for i, move in enumerate(poke1["moves"])]
-                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)), components=components)
-                    button_ctx = await custom_wait(self.bot, message, components)
-                    forget = int(button_ctx.component["label"][0]) - 1
-                    poke1["moves"][forget] = move
-                    caption = f"{name1} forgot **{button_ctx.component['label'][4:]}** and learnt **{movedata['name']}**!"
-                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption)), components=[])
-                else:
-                    poke1["moves"][poke1["moves"].index(0)] = move
-                    caption = f"{name1} learnt **{movedata['name']}**!"
-                await asyncio.sleep(2)
+                if str(lvl) in data.all_pokemon_data[str(poke1["species"])]["learnset"]:
+                    move = data.all_pokemon_data[str(poke1["species"])]["learnset"][str(lvl)]
+                    movedata = data.all_move_data[str(move)]
+                    if 0 not in poke1["moves"]:
+                        caption = f"{name1} is trying to learn **{movedata['name']}**, but it already knows 4 moves!\nWhich move would you like it to forget?"
+                        components = [create_actionrow(create_button(ButtonStyle.green, f"{i} - " + data.all_move_data[str(move)]["name"])) for i, move in enumerate(poke1["moves"])]
+                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)), components=components)
+                        button_ctx = await custom_wait(self.bot, message, components)
+                        forget = int(button_ctx.component["label"][0]) - 1
+                        poke1["moves"][forget] = move
+                        caption = f"{name1} forgot **{button_ctx.component['label'][4:]}** and learnt **{movedata['name']}**!"
+                        await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption)), components=[])
+                    else:
+                        poke1["moves"][poke1["moves"].index(0)] = move
+                        caption = f"{name1} learnt **{movedata['name']}**!"
+                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)), components=[])
+                    await asyncio.sleep(2)
             
             caption = f"**{ctx.author.name}** earned **$500**!"
             await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)), components=[])

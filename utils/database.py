@@ -128,6 +128,9 @@ class LiveList:
         item = self.l.pop(index)
         self.update()
         return item
+    
+    def index(self, item):
+        return self.l.index(item)
 
     def tolist(self):
         l = []

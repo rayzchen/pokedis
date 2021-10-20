@@ -1,7 +1,7 @@
 import math
 import random
 import json
-from .database import db
+from .database import db, LiveDict
 if "users" not in db:
     db["users"] = {}
 if "servers" not in db:
@@ -11,8 +11,12 @@ with open("utils/datafiles/pokedata.json") as f:
     all_pokemon_data = json.loads(f.read())
 with open("utils/datafiles/movedata.json") as f:
     all_move_data = json.loads(f.read())
+with open("utils/datafiles/special_moves.json") as f:
+    special_move_data = json.loads(f.read())
 with open("utils/datafiles/effective.json") as f:
     effective_table = json.loads(f.read())
+
+stat_names = ["HP", "Attack", "Defense", "Sp. Attack", "Sp. Defense", "Speed"]
 
 def calc_hp(base, ivs, ev, level):
     iv = ivs[0] & 8 + ivs[1] & 4 + ivs[2] & 2 + ivs[3] & 1
@@ -34,7 +38,7 @@ def calc_exp(level, growth, offset=0):
 def calc_exp_gain(trainer, poke1, poke2, wild):
     a = 1 if wild else 1.5
     t = 1.5 if trainer == poke1["ot"] else 1
-    b = all_pokemon_data[poke2["species"]]["xp_yield"]
+    b = all_pokemon_data[str(poke2["species"])]["xp_yield"]
     return int(a * t * b * poke2["level"] / 7)
 
 def gen_species(species, level, growth, types, moves, pp, base):
@@ -71,11 +75,28 @@ def gen_pokemon(species, level):
 
 def get_damage(poke1, poke2, move):
     movedata = all_move_data[str(move)]
+    stat1 = poke1["stats"]
+    if isinstance(stat1, LiveDict):
+        stat1 = stat1.d.copy()
+    else:
+        stat1 = stat1.copy()
+    for i, stat in enumerate(stat1):
+        stat1[stat] += poke1["stat_change"][i]
+    
+    stat2 = poke2["stats"]
+    if isinstance(stat2, LiveDict):
+        stat2 = stat2.d.copy()
+    else:
+        stat2 = stat2.copy()
+    for i, stat in enumerate(stat2):
+        stat2[stat] += poke2["stat_change"][i]
+    print(stat1, stat2)
+
     a = (2 * poke1["level"] / 5 + 2) * movedata["power"]
     if movedata["special"]:
-        a *= poke1["stats"]["spec"] / poke2["stats"]["spec"]
+        a *= stat1["spec"] / stat2["spec"]
     else:
-        a *= poke1["stats"]["atk"] / poke2["stats"]["def"]
+        a *= stat1["atk"] / stat2["def"]
     b = a / 50 + 2
     if movedata["type"] in poke1["types"]:
         b *= 1.5
@@ -107,10 +128,13 @@ def get_level(exp, growth):
     l.remove(exp)
     return index
 
+def calc_tm(a):
+    return int("".join(map(str, [1 if i + 1 in a else 0 for i in range(55)])), base=2)
+
 level_exp = [[calc_exp(i, j) for i in range(1, 101)] for j in (0, 3, 4, 5)]
 level_exp = [level_exp[0], None, None, *level_exp[1:]]
 
 items = ["Poké Ball", "Potion", "Antidote", "Paralyz Heal", "Burn Heal"]
 
-example_poke = gen_pokemon(176, 34)
+example_poke = gen_pokemon(4, 34)
 print(example_poke)
