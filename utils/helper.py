@@ -74,6 +74,8 @@ def make_hp(amount):
         bar[i] = 2
     if amount * 10 - end >= 0.5:
         bar[end] = 1
+    if bar[0] == 0:
+        bar[0] = 1
     
     if bar[0] == 0:
         text = emojis[-3]

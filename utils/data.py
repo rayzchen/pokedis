@@ -17,6 +17,20 @@ with open("utils/datafiles/effective.json") as f:
     effective_table = json.loads(f.read())
 
 stat_names = ["HP", "Attack", "Defense", "Sp. Attack", "Sp. Defense", "Speed"]
+conditions = [
+    "__burned__!",
+    "__frozen__! It cannot move!",
+    "__paralyzed__! It might not attack!",
+    "__poisoned__!",
+    "__badly spoisoned__!",
+]
+condition_names = ["BRN", "FRZ", "PAR", "PSN", "PSN"]
+condition_resist = ["fire", "ice", "electric", "poison", "poison"]
+
+def get_condition(poke):
+    if len(poke["status"]):
+        return " __" + " ".join([condition_names[i] for i in poke["status"]]) + "__"
+    return ""
 
 def calc_hp(base, ivs, ev, level):
     iv = ivs[0] & 8 + ivs[1] & 4 + ivs[2] & 2 + ivs[3] & 1

@@ -39,8 +39,21 @@ class User(commands.Cog):
         poke1["stat_change"] = [0, 0, 0, 0, 0]
         poke2["stat_change"] = [0, 0, 0, 0, 0]
 
+        registers = {}
+
         def get_text(caption):
-            return f"{name1} **[Level {poke1['level']}]**\n**{poke1['hp']} / {poke1['stats']['hp']}**\n{make_hp(poke1['hp'] / poke1['stats']['hp'])}\n\n{name2} **[Level {poke2['level']}]**\n**{poke2['hp']} / {poke2['stats']['hp']}**\n{make_hp(poke2['hp'] / poke2['stats']['hp'])}\n\n{caption}"
+            return "\n".join([
+                f"{name1} **[Level {poke1['level']}]**{data.get_condition(poke1)}",
+                f"**{poke1['hp']} / {poke1['stats']['hp']}**",
+                f"{make_hp(poke1['hp'] / poke1['stats']['hp'])}",
+                f"",
+                f"{name2} **[Level {poke2['level']}]**{data.get_condition(poke2)}",
+                f"**{poke2['hp']} / {poke2['stats']['hp']}**",
+                f"{make_hp(poke2['hp'] / poke2['stats']['hp'])}",
+                f"",
+                f"{caption}"
+            ])
+        
         async def fight(atkname, defname, atkpoke, defpoke, selected, winning, caption):
             if random.randint(0, 99) > data.all_move_data[str(selected)]["acc"]:
                 await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
@@ -62,6 +75,15 @@ class User(commands.Cog):
                     if defpoke["hp"] <= 0:
                         defpoke["hp"] = 0
                         outcome = 1
+                    
+                    if str(selected) in data.special_move_data:
+                        spec_move = data.special_move_data[str(selected)]
+                        if data.condition_resist[spec_move["condition"]] not in defpoke["types"]:
+                            if random.randint(0, 100) <= spec_move["acc"]:
+                                await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
+                                await asyncio.sleep(2)
+                                defpoke["status"].append(spec_move["condition"])
+                                caption = f"{defname} is {data.conditions[spec_move['condition']]}"
                 else:
                     caption += "\nSpecial effect!"
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
@@ -71,16 +93,23 @@ class User(commands.Cog):
                         affected = (defpoke, defname)
                     else:
                         affected = (atkpoke, atkname)
-                    affected[0]["stat_change"][spec_move["stat"]] += spec_move["change"]
-                    caption = f"{affected[1]}'s **{data.stat_names[spec_move['stat']]}** stat was "
-                    if spec_move["change"] > 0:
-                        caption += "raised!"
-                    else:
-                        caption += "lowered!"
-                    if affected[0]["stat_change"][spec_move["stat"]] > list(affected[0]["stats"].values())[spec_move["stat"]]:
+                    if "stat" in spec_move:
+                        affected[0]["stat_change"][spec_move["stat"]] += spec_move["change"]
+                        caption = f"{affected[1]}'s **{data.stat_names[spec_move['stat']]}** stat was "
+                        if spec_move["change"] > 0:
+                            caption += "raised!"
+                        else:
+                            caption += "lowered!"
+                        if affected[0]["stat_change"][spec_move["stat"]] > list(affected[0]["stats"].values())[spec_move["stat"]]:
+                            caption = "It had no effect!"
+                            affected[0]["stat_change"][spec_move["stat"]] = list(affected[0]["stats"].values())[spec_move["stat"]]
+                        print(affected[0]["stat_change"])
+                    elif data.condition_resist[spec_move["condition"]] in defpoke["types"]:
                         caption = "It had no effect!"
-                        affected[0]["stat_change"][spec_move["stat"]] = list(affected[0]["stats"].values())[spec_move["stat"]]
-                    print(affected[0]["stat_change"])
+                    else:
+                        affected[0]["status"].append(spec_move["condition"])
+                        caption = f"{affected[1]} is {data.conditions[spec_move['condition']]}"
+                
                 await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
                 await asyncio.sleep(2)
                 if outcome == 1:
