@@ -175,6 +175,9 @@ class User(commands.Cog):
 
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
                     await asyncio.sleep(2)
+                    caption = "What would you like to do next?"
+                    buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
+                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)), components=[buttons])
                     continue
                 buttons = [create_actionrow(create_button(ButtonStyle.green, label=data.movename(move) + f" - PP {poke1['pp'][i]}/{data.all_move_data[str(move)]['pp']}", disabled=poke1['pp'][i] == 0)) for i, move in enumerate(poke1["moves"]) if move != 0]
                 moves = {data.movename(move): move for move in poke1["moves"] if move != 0}
