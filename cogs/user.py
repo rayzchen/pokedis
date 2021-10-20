@@ -62,7 +62,7 @@ class User(commands.Cog):
         embed = create_embed("Start", "Use /help for help with commands.")
         await button_ctx.edit_origin(embed=embed, components=[])
         
-        charmander = data.gen_pokemon(176, 5)
+        charmander = data.gen_pokemon(4, 5)
         user = {
             "inventory": [],
             "pc": [{"name": "Potion", "count": 1}],
@@ -257,9 +257,31 @@ class User(commands.Cog):
             poke["level"] = data.get_level(poke["exp"], data.all_pokemon_data[str(poke["species"])]["growth"])
             lower = data.level_exp[data.all_pokemon_data[str(poke["species"])]["growth"]][poke["level"] - 1]
             upper = data.level_exp[data.all_pokemon_data[str(poke["species"])]["growth"]][poke["level"]]
-            text += f"**{data.pokename(poke['species'])}** __Level {poke['level']}__\n**{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\nATK: {poke['stats']['atk']} DEF: {poke['stats']['def']}\nSPEC: {poke['stats']['spec']} SPD: {poke['stats']['spd']}\nEXP: {poke['exp'] - lower} / {upper - lower}\n\n"
+            text += f"**{data.pokename(poke['species'])}** __Level {poke['level']}__\n**{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\nATK: {poke['stats']['atk']} DEF: {poke['stats']['def']}\nSPEC: {poke['stats']['spec']} SPD: {poke['stats']['spd']}\nEXP: {poke['exp'] - lower} / {upper - lower}\n\nMoves:\n\n"
+            for i in range(4):
+                if poke["moves"][i] == 0:
+                    break
+                text += f"**{data.movename(poke['moves'][i])}** - PP __{poke['pp'][i]} / {data.all_move_data[str(poke['moves'][i])]['pp']}__\n"
+            text += "\n"
         text += f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon"
         await send_embed(ctx, "Pokémon", text)
+    
+    @cog_ext.cog_slash(
+        name="restore", description="Visit the Pokémon Center",
+        guild_ids=[894254591858851871])
+    @check_start
+    async def restore(self, ctx: SlashContext):
+        for poke in database.db["users"][ctx.author.id]["pokemon"]:
+            poke["status"] = []
+            poke["hp"] = poke["stats"]["hp"]
+            data.calc_stats(poke)
+            for i in range(4):
+                if poke["moves"][i] == 0:
+                    break
+                poke["pp"][i] = data.all_move_data[str(poke["moves"][i])]["pp"]
+        msg = await send_embed(ctx, "Pokémon Center", "Healing Pokémon...")
+        await asyncio.sleep(2)
+        await msg.edit(embed=create_embed("Pokémon Center", "Healed your Pokémon!\nWe hope to see you soon!"))
 
 def setup(bot):
     bot.add_cog(User(bot))

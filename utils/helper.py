@@ -14,7 +14,8 @@ def create_embed(title, description, color=0x00CCFF, footer=""):
     return embed
 
 async def send_embed(ctx, title, description, color=0x00CCFF, footer="", **kwargs):
-    await ctx.send(embed=create_embed(title, description, color, footer), **kwargs)
+    msg = await ctx.send(embed=create_embed(title, description, color, footer), **kwargs)
+    return msg
 
 class EndCommand(Exception):
     pass

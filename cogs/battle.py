@@ -17,7 +17,7 @@ effectiveness = {
     4: "It was extremely effective!",
 }
 
-class User(commands.Cog):
+class Battle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
@@ -293,4 +293,4 @@ class User(commands.Cog):
             await asyncio.sleep(2)
 
 def setup(bot):
-    bot.add_cog(User(bot))
+    bot.add_cog(Battle(bot))
