@@ -1,13 +1,13 @@
 import flask
 import os
 
-app = flask.Flask(__name__)
+app = flask.Flask("__main__")
 
 @app.route("/")
 def index():
     return "Bot is online"
 
-@app.route("/hook")
+@app.route("/hook", methods=["POST", "GET"])
 def hook():
     os.system("git pull")
     open("restart", "w+").close()

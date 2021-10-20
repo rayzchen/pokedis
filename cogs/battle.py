@@ -142,11 +142,11 @@ class User(commands.Cog):
             if action == "Fight":
                 if poke1["pp"].count(0) == 4:
                     caption = f"{name1} has no moves left!"
-                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption)))
+                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption)), components=[])
                     await asyncio.sleep(2)
                     caption = f"{name1} used __Struggle__!"
-                    dmg = int(data.get_damage(poke1, poke2, 165) * (random.random() * 0.15 + 0.85))
-                    poke2["hp"] -= dmg
+                    dmg = data.get_damage(poke1, poke2, 165) * (random.random() * 0.15 + 0.85)
+                    poke2["hp"] -= round(dmg)
 
                     if poke2["hp"] <= 0:
                         poke2["hp"] = 0
@@ -161,7 +161,7 @@ class User(commands.Cog):
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
                     await asyncio.sleep(2)
                     caption = f"{name1} is affected by recoil!"
-                    poke1["hp"] -= int(dmg / 4)
+                    poke1["hp"] -= round(dmg / 4)
                     
                     if poke1["hp"] <= 0:
                         poke1["hp"] = 0
@@ -176,12 +176,12 @@ class User(commands.Cog):
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption)))
                     await asyncio.sleep(2)
                     continue
-                buttons = [create_actionrow(create_button(ButtonStyle.green, label=data.movename(move)) + f" PP {poke1['pp'][i]}/{data.all_move_data[str(move)]['pp']}", disabled=poke1['pp'][i] == 0) for i, move in enumerate(poke1["moves"]) if move != 0]
+                buttons = [create_actionrow(create_button(ButtonStyle.green, label=data.movename(move) + f" - PP {poke1['pp'][i]}/{data.all_move_data[str(move)]['pp']}", disabled=poke1['pp'][i] == 0)) for i, move in enumerate(poke1["moves"]) if move != 0]
                 moves = {data.movename(move): move for move in poke1["moves"] if move != 0}
                 caption = "Choose a move."
                 await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption)), components=buttons)
                 button_ctx = await custom_wait(self.bot, message, buttons)
-                selected = moves[button_ctx.component["label"]]
+                selected = moves[button_ctx.component["label"].split(" - ")[0]]
 
                 caption = f"{name1} has higher speed!\nIt attacks first!"
                 await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption)), components=[])
@@ -197,7 +197,8 @@ class User(commands.Cog):
                     defname = name1
                     atkpoke = poke2
                     defpoke = poke1
-                caption = f"{atkname} used __{button_ctx.component['label']}__!"
+                caption = f"{atkname} used __{button_ctx.component['label'].split(' - ')[0]}__!"
+                poke1["pp"][poke1["moves"].index(selected)] -= 1
                 
                 outcome = await fight(atkname, defname, atkpoke, defpoke, selected, 1, caption)
                 if outcome:
@@ -208,7 +209,6 @@ class User(commands.Cog):
                 await asyncio.sleep(2)
                 selected = defpoke["moves"][random.randint(0, 3 - defpoke["moves"].count(0))]
                 caption = f"{defname} used __{data.all_move_data[str(selected)]['name']}__!"
-                poke1["pp"][poke1["moves"].index(selected)] -= 1
 
                 outcome = await fight(defname, atkname, defpoke, atkpoke, selected, 2, caption)
                 if outcome:
