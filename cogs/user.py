@@ -1,9 +1,9 @@
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
-    create_actionrow, create_button, wait_for_component, create_select, create_select_option)
+    create_actionrow, create_button, +:regional_indicator_create_select, create_select_option)
 from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, database, check_start, data, make_hp, EndCommand, custom_wait
+from utils import send_embed, create_embed, database, check_start, data, make_hp, custom_wait
 import asyncio
 import math
 
@@ -103,16 +103,6 @@ class User(commands.Cog):
         name="pc", description="Store and withdraw items from Bill's PC", guild_ids=[894254591858851871])
     @check_start
     async def pc(self, ctx: SlashContext):
-        async def get_ctx(components):
-            try:
-                button_ctx = await wait_for_component(self.bot, components=components, timeout=60)
-            except asyncio.TimeoutError:
-                buttons = create_actionrow(
-                    create_button(ButtonStyle.green, "◀", disabled=True),
-                    create_button(ButtonStyle.green, "▶", disabled=True))
-                await msg.edit(components=[buttons])
-                raise EndCommand
-            return button_ctx
         page = 1
         button_ctx = None
         row2 = create_actionrow(
@@ -134,7 +124,7 @@ class User(commands.Cog):
                 msg = await ctx.send(embed=embed, components=[buttons, row2])
             else:
                 await button_ctx.edit_origin(embed=embed, components=[buttons, row2])
-            button_ctx = await get_ctx([buttons, row2])
+            button_ctx = await custom_wait(self.bot, msg, [buttons, row2])
             if button_ctx.component["label"] == "Quit":
                 for component in buttons["components"]:
                     component["disabled"] = True
@@ -152,7 +142,7 @@ class User(commands.Cog):
                     embed.description += "\n\nYou have no items!"
                     buttons = create_actionrow(create_button(ButtonStyle.green, "OK"))
                     await button_ctx.edit_origin(embed=embed, components=[buttons])
-                    button_ctx = await get_ctx(buttons)
+                    button_ctx = await custom_wait(self.bot, msg, buttons)
                     embed.description = description
                     continue
                 buttons = [
@@ -165,7 +155,7 @@ class User(commands.Cog):
                 ]
                 embed.description += "\n\nChoose an item to deposit."
                 await button_ctx.edit_origin(embed=embed, components=buttons)
-                button_ctx = await get_ctx(buttons)
+                button_ctx = await custom_wait(self.bot, msg, buttons)
                 if button_ctx.selected_options is not None:
                     item = int(button_ctx.selected_options[0])
                     itemdata = database.db["users"][ctx.author.id]["inventory"][item]
@@ -174,7 +164,7 @@ class User(commands.Cog):
                         embed.description = description + f"\n\nHow many **{itemdata['name']}**s do you want to deposit?\nNumber: {amount}"
                         buttons = create_actionrow(create_button(ButtonStyle.green, "-", disabled=amount == 1), create_button(ButtonStyle.green, "+", disabled=amount == itemdata["count"]), create_button(ButtonStyle.green, "Confirm"))
                         await button_ctx.edit_origin(embed=embed, components=[buttons])
-                        button_ctx = await get_ctx([buttons])
+                        button_ctx = await custom_wait(self.bot, msg, [buttons])
                         if button_ctx.component["label"] == "+":
                             amount += 1
                         elif button_ctx.component["label"] == "=":
@@ -195,14 +185,14 @@ class User(commands.Cog):
                         database.db["users"][ctx.author.id]["inventory"].pop(item)
                     embed.description = "Here are your current items: \n\n" + "\n".join(["__" + item["name"] + "__ **(x" + str(item["count"]) + ")**" for item in viewing]) + f"\n\nDeposited {amount} **{itemdata['name']}**" + ("s" if itemdata["count"] > 1 else "") + " to the PC."
                     await button_ctx.edit_origin(embed=embed, components=[buttons])
-                    button_ctx = await get_ctx([buttons])
+                    button_ctx = await custom_wait(self.bot, msg, [buttons])
             elif button_ctx.component["label"] == "Withdraw":
                 description = embed.description
                 if len(database.db["users"][ctx.author.id]["pc"]) == 0:
                     embed.description += "\n\nThe PC has no items!"
                     buttons = create_actionrow(create_button(ButtonStyle.green, "OK"))
                     await button_ctx.edit_origin(embed=embed, components=[buttons])
-                    button_ctx = await get_ctx(buttons)
+                    button_ctx = await custom_wait(self.bot, msg, buttons)
                     embed.description = description
                     continue
                 buttons = [
@@ -215,7 +205,7 @@ class User(commands.Cog):
                 ]
                 embed.description += "\n\nChoose an item to withdraw."
                 await button_ctx.edit_origin(embed=embed, components=buttons)
-                button_ctx = await get_ctx(buttons)
+                button_ctx = await custom_wait(self.bot, msg, buttons)
                 if button_ctx.selected_options is not None:
                     item = int(button_ctx.selected_options[0])
                     itemdata = database.db["users"][ctx.author.id]["pc"][item]
@@ -224,7 +214,7 @@ class User(commands.Cog):
                         embed.description = description + f"\n\nHow many **{itemdata['name']}**s do you want to withdraw?\nNumber: {amount}"
                         buttons = create_actionrow(create_button(ButtonStyle.green, "-", disabled=amount == 1), create_button(ButtonStyle.green, "+", disabled=amount == itemdata["count"]), create_button(ButtonStyle.green, "Confirm"))
                         await button_ctx.edit_origin(embed=embed, components=[buttons])
-                        button_ctx = await get_ctx([buttons])
+                        button_ctx = await custom_wait(self.bot, msg, [buttons])
                         if button_ctx.component["label"] == "+":
                             amount += 1
                         elif button_ctx.component["label"] == "=":
@@ -245,7 +235,7 @@ class User(commands.Cog):
                         database.db["users"][ctx.author.id]["pc"].pop(item)
                     embed.description = "Here are your current items: \n\n" + "\n".join(["__" + item["name"] + "__ **(x" + str(item["count"]) + ")**" for item in viewing]) + f"\n\nWithdrew {amount} **{itemdata['name']}**" + ("s" if itemdata["count"] > 1 else "") + " from the PC."
                     await button_ctx.edit_origin(embed=embed, components=[buttons])
-                    button_ctx = await get_ctx([buttons])
+                    button_ctx = await custom_wait(self.bot, msg, [buttons])
 
     @cog_ext.cog_slash(
         name="pokemon", description="View your Pokémon",
@@ -257,7 +247,7 @@ class User(commands.Cog):
             poke["level"] = data.get_level(poke["exp"], data.all_pokemon_data[str(poke["species"])]["growth"])
             lower = data.level_exp[data.all_pokemon_data[str(poke["species"])]["growth"]][poke["level"] - 1]
             upper = data.level_exp[data.all_pokemon_data[str(poke["species"])]["growth"]][poke["level"]]
-            text += f"**{data.pokename(poke['species'])}** __Level {poke['level']}__\n**{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\nATK: {poke['stats']['atk']} DEF: {poke['stats']['def']}\nSPEC: {poke['stats']['spec']} SPD: {poke['stats']['spd']}\nEXP: {poke['exp'] - lower} / {upper - lower}\n\nMoves:\n\n"
+            text += f"**{data.pokename(poke['species'])}** __Level {poke['level']}__\n**{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\nATK: {poke['stats']['atk']} DEF: {poke['stats']['def']}\nSPEC: {poke['stats']['spec']} SPD: {poke['stats']['spd']}\nEXP: {poke['exp'] - lower} / {upper - lower}\n\nMoves:\n"
             for i in range(4):
                 if poke["moves"][i] == 0:
                     break

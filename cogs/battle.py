@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
@@ -25,7 +24,6 @@ class Battle(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         if message.author.id == self.bot.user.id and len(message.embeds) and message.embeds[0].title == "Battle":
-            print(message.embeds[0].author.icon_url)
             userid = int(message.embeds[0].author.icon_url.split("/")[4])
             user = await self.bot.fetch_user(userid)
             await send_embed(message.channel, "Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user)
@@ -116,7 +114,6 @@ class Battle(commands.Cog):
                         if affected[0]["stat_change"][spec_move["stat"]] > list(affected[0]["stats"].values())[spec_move["stat"]]:
                             caption = "It had no effect!"
                             affected[0]["stat_change"][spec_move["stat"]] = list(affected[0]["stats"].values())[spec_move["stat"]]
-                        print(affected[0]["stat_change"])
                     elif data.condition_resist[spec_move["condition"]] in defpoke["types"]:
                         caption = "It had no effect!"
                     else:
@@ -189,15 +186,21 @@ class Battle(commands.Cog):
 
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
                     await asyncio.sleep(2)
-                    caption = "What would you like to do next?"
+                    caption = "What would you like to do?"
                     buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
                     await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[buttons])
                     continue
                 buttons = [create_actionrow(create_button(ButtonStyle.green, label=data.movename(move) + f" - PP {poke1['pp'][i]}/{data.all_move_data[str(move)]['pp']}", disabled=poke1['pp'][i] == 0)) for i, move in enumerate(poke1["moves"]) if move != 0]
+                buttons.append(create_actionrow(create_button(ButtonStyle.green, label="Back")))
                 moves = {data.movename(move): move for move in poke1["moves"] if move != 0}
                 caption = "Choose a move."
                 await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=buttons)
                 button_ctx = await custom_wait(self.bot, msg, buttons)
+                if button_ctx.component["label"] == "Back":
+                    caption = "What would you like to do?"
+                    buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
+                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[buttons])
+                    continue
                 selected = moves[button_ctx.component["label"].split(" - ")[0]]
 
                 caption = f"{name1} has higher speed!\nIt attacks first!"
