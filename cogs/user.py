@@ -258,7 +258,7 @@ class User(commands.Cog):
 
             buttons = create_actionrow(
                 create_button(ButtonStyle.green, "◀", disabled=page < 2),
-                create_button(ButtonStyle.green, "▶", disabled=page == len(database.db["users"][ctx.author.id]["pokemon"])))
+                create_button(ButtonStyle.green, "▶", disabled=page == len(database.db["users"][ctx.author.id]["pokemon"])) - 1)
             if msg is None:
                 msg = await send_embed(ctx, "Pokémon", text, footer=f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon", author=ctx.author, components=[buttons])
             else:
