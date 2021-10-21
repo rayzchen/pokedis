@@ -1,6 +1,8 @@
 import math
 import random
 import json
+import cStringIO
+import urllib.request
 from .database import db, LiveDict
 if "users" not in db:
     db["users"] = {}
@@ -144,6 +146,12 @@ def get_level(exp, growth):
 
 def calc_tm(a):
     return int("".join(map(str, [1 if i + 1 in a else 0 for i in range(55)])), base=2)
+
+def get_image(species):
+    link = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/" + str(species) + ".png"
+    url = urllib.request.urlopen(link)
+    file = cStringIO.StringIO(url.read())
+    return Image.open(file)
 
 level_exp = [[calc_exp(i, j) for i in range(1, 101)] for j in (0, 3, 4, 5)]
 level_exp = [level_exp[0], None, None, *level_exp[1:]]

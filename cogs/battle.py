@@ -4,9 +4,11 @@ from discord_slash.utils.manage_components import (
     create_actionrow, create_button)
 from discord_slash.model import ButtonStyle
 from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait
+from PIL import Image
 import asyncio
 import random
 import math
+import io
 
 effectiveness = {
     0: "It was not effective at all!",
@@ -47,6 +49,17 @@ class Battle(commands.Cog):
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
 
+        img1 = data.get_image(poke1["species"])
+        img2 = data.get_image(poke2["species"])
+        img = Image.new("RGB", (474, 237))
+        img.paste(Image.resize(img1, (0, 0)), (0, 0))
+        img.paste(Image.resize(img2, (237, 0)), (0, 0))
+
+        with io.BytesIO() as binary:
+            img.save(binary, "PNG")
+            binary.seek(0)
+            battle_file = discord.File(fp=binary, filename="battle.png")
+
         poke1["stat_change"] = [0, 0, 0, 0, 0]
         poke2["stat_change"] = [0, 0, 0, 0, 0]
 
@@ -65,12 +78,22 @@ class Battle(commands.Cog):
                 f"{caption}"
             ])
         
+        async def send_battle_embed(buttons=None):
+            embed = create_embed("Battle", get_text(caption), author=ctx.author)
+            embed.set_image(url="attachment://battle.png")
+            await button_ctx.origin_message.edit(embed=embed, file=battle_file, components=buttons)
+        
+        async def send_battle_embed2(buttons=[]):
+            embed = create_embed("Battle", get_text(caption), author=ctx.author)
+            embed.set_image(url="attachment://battle.png")
+            await button_ctx.edit_origin(embed=embed, file=battle_file, components=buttons)
+        
         async def fight(atkname, defname, atkpoke, defpoke, selected, winning, caption):
             if random.randint(0, 99) > data.all_move_data[str(selected)]["acc"]:
-                await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                await send_battle_embed()
                 await asyncio.sleep(2)
                 caption = f"{atkname} missed!"
-                await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                await send_battle_embed()
                 await asyncio.sleep(2)
             else:
                 outcome = 0
@@ -91,13 +114,13 @@ class Battle(commands.Cog):
                         spec_move = data.special_move_data[str(selected)]
                         if data.condition_resist[spec_move["condition"]] not in defpoke["types"]:
                             if random.randint(0, 100) <= spec_move["acc"]:
-                                await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                                await send_battle_embed()
                                 await asyncio.sleep(2)
                                 defpoke["status"].append(spec_move["condition"])
                                 caption = f"{defname} is {data.conditions[spec_move['condition']]}"
                 else:
                     caption += "\nSpecial effect!"
-                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                    await send_battle_embed()
                     await asyncio.sleep(2)
                     spec_move = data.special_move_data[str(selected)]
                     if "foe" in spec_move["affects"]:
@@ -121,7 +144,7 @@ class Battle(commands.Cog):
                         caption = f"{affected[1]} is {data.conditions[spec_move['condition']]}"
                         if spec_move["condition"] == 4:
                             registers["bad_psn_turn"] = 0
-                await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                await send_battle_embed()
                 await asyncio.sleep(2)
                 if outcome == 1:
                     win = outcome == winning
@@ -129,7 +152,7 @@ class Battle(commands.Cog):
                         caption = f"{defname} fainted!"
                     else:
                         caption = f"{atkname} fainted!"
-                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                    await send_battle_embed()
                     await asyncio.sleep(2)
                     return 1, win
             return False
@@ -153,7 +176,7 @@ class Battle(commands.Cog):
             if action == "Fight":
                 if poke1["pp"].count(0) == 4:
                     caption = f"{name1} has no moves left!"
-                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[])
+                    await send_battle_embed2()
                     await asyncio.sleep(2)
                     caption = f"{name1} used __Struggle__!"
                     dmg = data.get_damage(poke1, poke2, 165) * (random.random() * 0.15 + 0.85)
@@ -162,14 +185,14 @@ class Battle(commands.Cog):
                     if poke2["hp"] <= 0:
                         poke2["hp"] = 0
                         outcome = (1, True)
-                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                        await send_battle_embed()
                         await asyncio.sleep(2)
                         caption = f"{name2} fainted!"
-                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                        await send_battle_embed()
                         await asyncio.sleep(2)
                         break
 
-                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                    await send_battle_embed()
                     await asyncio.sleep(2)
                     caption = f"{name1} is affected by recoil!"
                     poke1["hp"] -= round(dmg / 4)
@@ -177,34 +200,34 @@ class Battle(commands.Cog):
                     if poke1["hp"] <= 0:
                         poke1["hp"] = 0
                         outcome = (1, False)
-                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                        await send_battle_embed()
                         await asyncio.sleep(2)
                         caption = f"{name1} fainted!"
-                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                        await send_battle_embed()
                         await asyncio.sleep(2)
                         break
 
-                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                    await send_battle_embed()
                     await asyncio.sleep(2)
                     caption = "What would you like to do?"
                     buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
-                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[buttons])
+                    await send_battle_embed([buttons])
                     continue
                 buttons = [create_actionrow(create_button(ButtonStyle.green, label=data.movename(move) + f" - PP {poke1['pp'][i]}/{data.all_move_data[str(move)]['pp']}", disabled=poke1['pp'][i] == 0)) for i, move in enumerate(poke1["moves"]) if move != 0]
                 buttons.append(create_actionrow(create_button(ButtonStyle.green, label="Back")))
                 moves = {data.movename(move): move for move in poke1["moves"] if move != 0}
                 caption = "Choose a move."
-                await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=buttons)
+                await send_battle_embed2(buttons)
                 button_ctx = await custom_wait(self.bot, msg, buttons)
                 if button_ctx.component["label"] == "Back":
                     caption = "What would you like to do?"
                     buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
-                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[buttons])
+                    await send_battle_embed2([buttons])
                     continue
                 selected = moves[button_ctx.component["label"].split(" - ")[0]]
 
                 caption = f"{name1} has higher speed!\nIt attacks first!"
-                await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[])
+                await send_battle_embed2()
                 await asyncio.sleep(2)
                 
                 if poke1["stats"]["spd"] > poke2["stats"]["spd"]:
@@ -225,7 +248,7 @@ class Battle(commands.Cog):
                     break
                 
                 caption = f"{defname} strikes back fiercely!"
-                await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                await send_battle_embed()
                 await asyncio.sleep(2)
                 selected = defpoke["moves"][random.randint(0, 3 - defpoke["moves"].count(0))]
                 caption = f"{defname} used __{data.all_move_data[str(selected)]['name']}__!"
@@ -247,17 +270,17 @@ class Battle(commands.Cog):
                         escape = random.randint(0, 255) < odds
                 if escape:
                     caption = "Got away safely!"
-                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[])
+                    await send_battle_embed2()
                     outcome = (1, False)
                     break
                 else:
                     caption = "Not fast enough!"
-                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[])
+                    await send_battle_embed2()
                     await asyncio.sleep(2)
                     run_count += 1
                     
                     caption = f"{name2} strikes!"
-                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+                    await send_battle_embed()
                     await asyncio.sleep(2)
 
                     selected = poke2["moves"][random.randint(0, 3 - poke2["moves"].count(0))]
@@ -268,14 +291,14 @@ class Battle(commands.Cog):
                         break
             
             buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
-            await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[buttons])
+            await send_battle_embed([buttons])
         
         del poke1["stat_change"]
         if outcome[1]:
             gain = data.calc_exp_gain(ctx.author.id, poke1, poke2, True)
             poke1["exp"] += gain
             caption = f"{name1} earned **{gain} EXP**!"
-            await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[])
+            await send_battle_embed()
             await asyncio.sleep(2)
 
             lvl = data.get_level(poke1["exp"], data.all_pokemon_data[str(poke1["species"])]["growth"])
@@ -286,7 +309,7 @@ class Battle(commands.Cog):
                 poke1["level"] = lvl
                 data.calc_stats(poke1)
                 caption += f"ATK -> {poke1['stats']['atk']} DEF -> {poke1['stats']['def']}\nSPEC -> {poke1['stats']['spec']} SPD -> {poke1['stats']['spd']}"
-                await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[])
+                await send_battle_embed()
                 await asyncio.sleep(4)
                 if str(lvl) in data.all_pokemon_data[str(poke1["species"])]["learnset"]:
                     move = data.all_pokemon_data[str(poke1["species"])]["learnset"][str(lvl)]
@@ -294,20 +317,20 @@ class Battle(commands.Cog):
                     if 0 not in poke1["moves"]:
                         caption = f"{name1} is trying to learn **{movedata['name']}**, but it already knows 4 moves!\nWhich move would you like it to forget?"
                         components = [create_actionrow(create_button(ButtonStyle.green, f"{i} - " + data.all_move_data[str(move)]["name"])) for i, move in enumerate(poke1["moves"])]
-                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=components)
+                        await send_battle_embed(components)
                         button_ctx = await custom_wait(self.bot, msg, components)
                         forget = int(button_ctx.component["label"][0]) - 1
                         poke1["moves"][forget] = move
                         caption = f"{name1} forgot **{button_ctx.component['label'][4:]}** and learnt **{movedata['name']}**!"
-                        await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[])
+                        await send_battle_embed2()
                     else:
                         poke1["moves"][poke1["moves"].index(0)] = move
                         caption = f"{name1} learnt **{movedata['name']}**!"
-                        await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[])
+                        await send_battle_embed()
                     await asyncio.sleep(2)
             
             caption = f"**{ctx.author.name}** earned **$500**!"
-            await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[])
+            await send_battle_embed()
             await asyncio.sleep(2)
         database.db["servers"][ctx.guild.id]["battling"].remove(ctx.channel.id)
 
