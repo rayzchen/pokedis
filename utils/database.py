@@ -131,6 +131,10 @@ class LiveList:
     
     def index(self, item):
         return self.l.index(item)
+    
+    def remove(self, item):
+        self.l.remove(item)
+        self.update()
 
     def tolist(self):
         l = []

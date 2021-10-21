@@ -3,7 +3,7 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
     create_actionrow, create_button, wait_for_component, create_select, create_select_option)
 from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, database, check_start, data, make_hp, EndCommand
+from utils import send_embed, create_embed, database, check_start, data, make_hp, EndCommand, custom_wait
 import asyncio
 import math
 
@@ -31,35 +31,35 @@ class User(commands.Cog):
         guild_ids=[894254591858851871])
     async def start(self, ctx: SlashContext):
         if ctx.author.id in database.db["users"]:
-            await send_embed(ctx, "Error", "You have already started PokéDis!")
+            await send_embed(ctx, "Error", "You have already started PokéDis!", author=ctx.author)
             return
         buttons = create_actionrow(
             create_button(style=ButtonStyle.green, label="Talk"))
-        await send_embed(
-            ctx, "Start", "Talk to Professor Oak.", components=[buttons])
-        button_ctx = await wait_for_component(self.bot, components=buttons)
+        msg = await send_embed(
+            ctx, "Start", "Talk to Professor Oak.", author=ctx.author, components=[buttons])
+        button_ctx = await custom_wait(self.bot, msg, buttons)
 
         for line in start_text:
             buttons = create_actionrow(
                 create_button(style=ButtonStyle.green, label="Continue"))
-            embed = create_embed("Professor Oak", "OAK - " + delim.join(line))
+            embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
             await button_ctx.edit_origin(embed=embed, components=[buttons])
-            button_ctx = await wait_for_component(self.bot, components=buttons)
+            button_ctx = await custom_wait(self.bot, msg, buttons)
         
         buttons = create_actionrow(
             create_button(style=ButtonStyle.green, label="Continue"))
-        embed = create_embed("Professor Oak", "OAK - **" + ctx.author.name.upper() + "**!")
+        embed = create_embed("Professor Oak", "OAK - **" + ctx.author.name.upper() + "**!", author=ctx.author)
         await button_ctx.edit_origin(embed=embed, components=[buttons])
-        button_ctx = await wait_for_component(self.bot, components=buttons)
+        button_ctx = await custom_wait(self.bot, msg, buttons)
 
         for line in start_text2:
             buttons = create_actionrow(
                 create_button(style=ButtonStyle.green, label="Continue"))
-            embed = create_embed("Professor Oak", "OAK - " + delim.join(line))
+            embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
             await button_ctx.edit_origin(embed=embed, components=[buttons])
-            button_ctx = await wait_for_component(self.bot, components=buttons)
+            button_ctx = await custom_wait(self.bot, msg, buttons)
         
-        embed = create_embed("Start", "Use /help for help with commands.")
+        embed = create_embed("Start", "Use /help for help with commands.", author=ctx.author)
         await button_ctx.edit_origin(embed=embed, components=[])
         
         charmander = data.gen_pokemon(4, 5)
@@ -79,7 +79,7 @@ class User(commands.Cog):
     async def use(self, ctx: SlashContext, item):
         name = " ".join(map(str.capitalize, item.rstrip().lstrip().lower().split(" ")))
         if name not in data.items:
-            await send_embed(ctx, "Error", f"Item __{name}__ does not exist!")
+            await send_embed(ctx, "Error", f"Item __{name}__ does not exist!", author=ctx.author)
             return
 
         inv = database.db["users"][ctx.author.id]["inventory"]
@@ -91,13 +91,13 @@ class User(commands.Cog):
                     remove = i
                 break
         else:
-            await send_embed(ctx, "Error", f"You do not have a '__{name}__'!")
+            await send_embed(ctx, "Error", f"You do not have a '__{name}__'!", author=ctx.author)
             return
         if remove != -1:
             inv.pop(remove)
         database.db["users"][ctx.author.id]["inventory"] = inv
 
-        await send_embed(ctx, "Item", f"Used '__{name}__'")
+        await send_embed(ctx, "Item", f"Used '__{name}__'", author=ctx.author)
     
     @cog_ext.cog_slash(
         name="pc", description="Store and withdraw items from Bill's PC", guild_ids=[894254591858851871])
@@ -126,7 +126,7 @@ class User(commands.Cog):
                 page = 1
             viewing = database.db["users"][ctx.author.id]["pc"][(page - 1) * 10: page * 10]
             length = math.ceil(len(database.db['users'][ctx.author.id]['pc']) / 10)
-            embed = create_embed("Bill's PC", "Here are your current items: \n\n" + "\n".join(["__" + item["name"] + "__ **(x" + str(item["count"]) + ")**" for item in viewing]), footer=f"Page {page} of {length}")
+            embed = create_embed("Bill's PC", "Here are your current items: \n\n" + "\n".join(["__" + item["name"] + "__ **(x" + str(item["count"]) + ")**" for item in viewing]), footer=f"Page {page} of {length}", author=ctx.author)
             buttons = create_actionrow(
                 create_button(ButtonStyle.green, "◀", disabled=page < 2),
                 create_button(ButtonStyle.green, "▶", disabled=page == length))
@@ -264,7 +264,7 @@ class User(commands.Cog):
                 text += f"**{data.movename(poke['moves'][i])}** - PP __{poke['pp'][i]} / {data.all_move_data[str(poke['moves'][i])]['pp']}__\n"
             text += "\n"
         text += f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon"
-        await send_embed(ctx, "Pokémon", text)
+        await send_embed(ctx, "Pokémon", text, author=ctx.author)
     
     @cog_ext.cog_slash(
         name="restore", description="Visit the Pokémon Center",
@@ -279,9 +279,9 @@ class User(commands.Cog):
                 if poke["moves"][i] == 0:
                     break
                 poke["pp"][i] = data.all_move_data[str(poke["moves"][i])]["pp"]
-        msg = await send_embed(ctx, "Pokémon Center", "Healing Pokémon...")
+        msg = await send_embed(ctx, "Pokémon Center", "Healing Pokémon...", author=ctx.author)
         await asyncio.sleep(2)
-        await msg.edit(embed=create_embed("Pokémon Center", "Healed your Pokémon!\nWe hope to see you soon!"))
+        await msg.edit(embed=create_embed("Pokémon Center", "Healed your Pokémon!\nWe hope to see you soon!", author=ctx.author))
 
 def setup(bot):
     bot.add_cog(User(bot))

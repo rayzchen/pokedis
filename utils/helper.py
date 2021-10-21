@@ -8,13 +8,15 @@ from discord_slash.utils.manage_components import wait_for_component
 def get_prefix(bot, ctx):
     return "p!"
 
-def create_embed(title, description, color=0x00CCFF, footer=""):
+def create_embed(title, description, color=0x00CCFF, footer="", author=None):
     embed = discord.Embed(title=title, description=description, color=color)
     embed.set_footer(text=footer)
+    if author is not None:
+        embed.set_author(name=author.name, icon_url=author.avatar_url)
     return embed
 
-async def send_embed(ctx, title, description, color=0x00CCFF, footer="", **kwargs):
-    msg = await ctx.send(embed=create_embed(title, description, color, footer), **kwargs)
+async def send_embed(ctx, title, description, color=0x00CCFF, footer="", author=None, **kwargs):
+    msg = await ctx.send(embed=create_embed(title, description, color, footer, author), **kwargs)
     return msg
 
 class EndCommand(Exception):
@@ -100,15 +102,17 @@ def make_hp(amount):
     return text
 
 async def custom_wait(bot, message, components):
-    try:
-        button_ctx = await wait_for_component(bot, components=components, timeout=60)
-    except asyncio.TimeoutError:
-        if message.embeds[0].title == "Battle":
-            try:
-                await message.reply(embed=create_embed("Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved."))
-            except:
-                raise EndCommand
-            print(components)
+    userid = int(message.embeds[0].author.icon_url.split("/")[4])
+    user = await bot.fetch_user(userid)
+    while True:
+        try:
+            button_ctx = await wait_for_component(bot, components=components, timeout=60)
+        except asyncio.TimeoutError:
+            if message.embeds[0].title == "Battle":
+                try:
+                    await message.reply(embed=create_embed("Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user))
+                except:
+                    raise EndCommand
             if isinstance(components, dict):
                 for component in components["components"]:
                     component["disabled"] = True
@@ -119,5 +123,8 @@ async def custom_wait(bot, message, components):
                         component["disabled"] = True
                 await message.edit(components=components)
             raise EndCommand
-        raise
+        if button_ctx.author_id != userid:
+            await button_ctx.reply("This interaction is not for you.", hidden=True)
+        else:
+            break
     return button_ctx
