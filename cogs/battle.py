@@ -3,7 +3,7 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
     create_actionrow, create_button)
 from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait
+from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait, EndCommand
 from PIL import Image
 import asyncio
 import random
@@ -44,7 +44,12 @@ class Battle(commands.Cog):
             return
         database.db["servers"][ctx.guild.id]["battling"].append(ctx.channel.id)
 
-        poke1 = database.db["users"][ctx.author.id]["pokemon"][0]
+        for poke in database.db["users"][ctx.author.id]["pokemon"]:
+            if poke["hp"] > 0:
+                poke1 = poke
+                break
+        else:
+            raise EndCommand
         poke2 = data.gen_pokemon(19, 2)
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
@@ -112,12 +117,30 @@ class Battle(commands.Cog):
                     
                     if str(selected) in data.special_move_data:
                         spec_move = data.special_move_data[str(selected)]
-                        if data.condition_resist[spec_move["condition"]] not in defpoke["types"]:
-                            if random.randint(0, 100) <= spec_move["acc"]:
-                                await send_battle_embed()
-                                await asyncio.sleep(2)
-                                defpoke["status"].append(spec_move["condition"])
-                                caption = f"{defname} is {data.conditions[spec_move['condition']]}"
+                        if "acc" in spec_move:
+                            flag = random.randint(0, 100) <= spec_move["acc"]
+                        else:
+                            flag = True
+                        if flag:
+                            if "condition" in spec_move:
+                                if data.condition_resist[spec_move["condition"]] not in defpoke["types"]:
+                                    await send_battle_embed()
+                                    await asyncio.sleep(2)
+                                    defpoke["status"].append(spec_move["condition"])
+                                    caption = f"{defname} is {data.conditions[spec_move['condition']]}"
+                            elif "stat" in spec_move:
+                                defpoke["stat_change"][spec_move["stat"]] += spec_move["change"]
+                                new_caption = f"{defname}'s **{data.stat_names[spec_move['stat']]}** stat was "
+                                if spec_move["change"] > 0:
+                                    new_caption += "raised!"
+                                else:
+                                    new_caption += "lowered!"
+                                if defpoke["stat_change"][spec_move["stat"]] < list(defpoke["stats"].values())[spec_move["stat"]]:
+                                    defpoke["stat_change"][spec_move["stat"]] = list(defpoke["stats"].values())[spec_move["stat"]]
+                                else:
+                                    await send_battle_embed()
+                                    await asyncio.sleep(2)
+                                    caption = new_caption
                 else:
                     caption += "\nSpecial effect!"
                     await send_battle_embed()
@@ -137,21 +160,19 @@ class Battle(commands.Cog):
                         if affected[0]["stat_change"][spec_move["stat"]] > list(affected[0]["stats"].values())[spec_move["stat"]]:
                             caption = "It had no effect!"
                             affected[0]["stat_change"][spec_move["stat"]] = list(affected[0]["stats"].values())[spec_move["stat"]]
-                    elif data.condition_resist[spec_move["condition"]] in defpoke["types"]:
-                        caption = "It had no effect!"
-                    else:
-                        affected[0]["status"].append(spec_move["condition"])
-                        caption = f"{affected[1]} is {data.conditions[spec_move['condition']]}"
-                        if spec_move["condition"] == 4:
-                            registers["bad_psn_turn"] = 0
+                    elif "condition" in spec_move:
+                        if data.condition_resist[spec_move["condition"]] in defpoke["types"]:
+                            caption = "It had no effect!"
+                        else:
+                            affected[0]["status"].append(spec_move["condition"])
+                            caption = f"{affected[1]} is {data.conditions[spec_move['condition']]}"
+                            if spec_move["condition"] == 4:
+                                registers["bad_psn_turn"] = 0
                 await send_battle_embed()
                 await asyncio.sleep(2)
                 if outcome == 1:
                     win = outcome == winning
-                    if win:
-                        caption = f"{defname} fainted!"
-                    else:
-                        caption = f"{atkname} fainted!"
+                    caption = f"{defname} fainted!"
                     await send_battle_embed()
                     await asyncio.sleep(2)
                     return 1, win
@@ -256,8 +277,6 @@ class Battle(commands.Cog):
                 outcome = await fight(defname, atkname, defpoke, atkpoke, selected, 2, caption)
                 if outcome:
                     break
-
-                caption = "What would you like to do?"
             elif action == "Run":
                 auto = math.floor(poke2["stats"]["spd"] / 4) % 256
                 if auto == 0:
@@ -290,6 +309,36 @@ class Battle(commands.Cog):
                     if outcome:
                         break
             
+            elif action == "Pokémon":
+                caption = "Choose a Pokémon.\n\n"
+                for i, poke in enumerate(database.db["users"][ctx.author.id]["pokemon"]):
+                    caption += f":{data.numbers[i]}: __{data.pokename(poke['species'])}__ **[Level {poke['level']}]** {data.get_condition(poke)} **{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\n"
+                buttons = [create_button(ButtonStyle.green, str(i + 1), disabled=len(database.db["users"][ctx.author.id]["pokemon"]) <= i or database.db["users"][ctx.author.id]["pokemon"][i]["hp"] == 0) for i in range(6)]
+                buttons = [create_actionrow(*buttons[:3]), create_actionrow(*buttons[3:]), create_actionrow(create_button(ButtonStyle.green, "Back"))]
+                await send_battle_embed(buttons)
+                button_ctx = await custom_wait(self.bot, msg, buttons)
+                if button_ctx.component["label"] == "Back":
+                    caption = "What would you like to do?"
+                    buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
+                    await send_battle_embed([buttons])
+                    continue
+                swap = database.db["users"][ctx.author.id]["pokemon"][int(button_ctx.component["label"]) - 1]
+                if swap == poke1:
+                    caption = f"**{data.pokename(poke1['species'])}** is already out on the field!"
+                    await send_battle_embed([])
+                    await asyncio.sleep(2)
+                else:
+                    caption = f"**{data.pokename(poke1['species'])}**, return!"
+                    await send_battle_embed([])
+                    await asyncio.sleep(2)
+                    del poke1["stat_change"]
+                    poke1 = swap
+                    name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
+                    caption = f"Go, **{data.pokename(poke1['species'])}**!"
+                    await send_battle_embed()
+                    await asyncio.sleep(2)
+            
+            caption = "What would you like to do?"
             buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
             await send_battle_embed([buttons])
         

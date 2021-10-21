@@ -1,4 +1,6 @@
 {
     "39": {"affects": ["adjacent", "foe"], "stat": 2, "change": -1},
-    "45": {"affects": ["adjacent", "foe"], "stat": 1, "change": -1}
+    "45": {"affects": ["adjacent", "foe"], "stat": 1, "change": -1},
+    "52": {},
+    "145": {"affects": ["adjacent", "foe"], "stat": 4, "change": -1, "acc": 10}
 }
