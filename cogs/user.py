@@ -242,8 +242,11 @@ class User(commands.Cog):
         guild_ids=[894254591858851871])
     @check_start
     async def pokemon(self, ctx: SlashContext):
-        text = ""
-        for poke in database.db["users"][ctx.author.id]["pokemon"]:
+        page = 0
+        msg = None
+        while True:
+            text = ""
+            poke = database.db["users"][ctx.author.id]["pokemon"][page]
             poke["level"] = data.get_level(poke["exp"], data.all_pokemon_data[str(poke["species"])]["growth"])
             lower = data.level_exp[data.all_pokemon_data[str(poke["species"])]["growth"]][poke["level"] - 1]
             upper = data.level_exp[data.all_pokemon_data[str(poke["species"])]["growth"]][poke["level"]]
@@ -252,9 +255,19 @@ class User(commands.Cog):
                 if poke["moves"][i] == 0:
                     break
                 text += f"**{data.movename(poke['moves'][i])}** - PP __{poke['pp'][i]} / {data.all_move_data[str(poke['moves'][i])]['pp']}__\n"
-            text += "\n"
-        text += f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon"
-        await send_embed(ctx, "Pokémon", text, author=ctx.author)
+
+            buttons = create_actionrow(
+                create_button(ButtonStyle.green, "◀", disabled=page < 2),
+                create_button(ButtonStyle.green, "▶", disabled=page == len(database.db["users"][ctx.author.id]["pokemon"])))
+            if msg is None:
+                msg = await send_embed(ctx, "Pokémon", text, footer=f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon", author=ctx.author, components=[buttons])
+            else:
+                await msg.edit(embed=create_embed("Pokémon", text, footer=f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon", author=ctx.author), components=[buttons])
+            button_ctx = await custom_wait(self.bot, msg, [buttons])
+            if button_ctx.component["label"] == "◀":
+                page -= 1
+            elif button_ctx.component["label"] == "▶"
+                page += 1
     
     @cog_ext.cog_slash(
         name="restore", description="Visit the Pokémon Center",

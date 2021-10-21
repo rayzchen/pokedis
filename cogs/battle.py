@@ -199,7 +199,7 @@ class Battle(commands.Cog):
                 if button_ctx.component["label"] == "Back":
                     caption = "What would you like to do?"
                     buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
-                    await button_ctx.origin_message.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[buttons])
+                    await button_ctx.edit_origin(embed=create_embed("Battle", get_text(caption), author=ctx.author), components=[buttons])
                     continue
                 selected = moves[button_ctx.component["label"].split(" - ")[0]]
 
