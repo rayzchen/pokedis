@@ -266,7 +266,7 @@ class User(commands.Cog):
             button_ctx = await custom_wait(self.bot, msg, [buttons])
             if button_ctx.component["label"] == "◀":
                 page -= 1
-            elif button_ctx.component["label"] == "▶"
+            elif button_ctx.component["label"] == "▶":
                 page += 1
     
     @cog_ext.cog_slash(
