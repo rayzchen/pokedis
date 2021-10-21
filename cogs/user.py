@@ -1,7 +1,7 @@
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
-    create_actionrow, create_button, +:regional_indicator_create_select, create_select_option)
+    create_actionrow, create_button,create_select, create_select_option)
 from discord_slash.model import ButtonStyle
 from utils import send_embed, create_embed, database, check_start, data, make_hp, custom_wait
 import asyncio
