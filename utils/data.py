@@ -27,6 +27,8 @@ conditions = [
 condition_names = ["BRN", "FRZ", "PAR", "PSN", "PSN"]
 condition_resist = ["fire", "ice", "electric", "poison", "poison"]
 
+numbers = ["one", "two", "three", "four", "five", "six"]
+
 def get_condition(poke):
     if len(poke["status"]):
         return " __" + " ".join([condition_names[i] for i in poke["status"]]) + "__"
@@ -150,5 +152,5 @@ level_exp = [level_exp[0], None, None, *level_exp[1:]]
 
 items = ["Poké Ball", "Potion", "Antidote", "Paralyz Heal", "Burn Heal"]
 
-example_poke = gen_pokemon(4, 34)
+example_poke = gen_pokemon(7, 10)
 print(example_poke)

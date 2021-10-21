@@ -5,5 +5,6 @@
     "39": {"name": "Tail Whip", "pp": 30, "power": 0, "acc": 100, "effect": 1, "special": 0, "type": "normal"},
     "45": {"name": "Growl", "pp": 40, "power": 0, "acc": 100, "effect": 1, "special": 0, "type": "normal"},
     "52": {"name": "Ember", "pp": 25, "power": 40, "acc": 100, "effect": 0, "special": 1, "type": "fire"},
+    "145": {"name": "Bubble", "pp": 30, "power": 40, "acc": 100, "effect": 0, "special": 1, "type": "water"},
     "165": {"name": "Struggle", "pp": 1, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "normal"}
 }
