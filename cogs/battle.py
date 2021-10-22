@@ -5,7 +5,9 @@ from discord_slash.utils.manage_components import (
 from discord_slash.model import ButtonStyle
 from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait, EndCommand
 from PIL import Image
+from uuid import uuid4
 import asyncio
+import discord
 import random
 import math
 import io
@@ -54,16 +56,18 @@ class Battle(commands.Cog):
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
 
-        img1 = data.get_image(poke1["species"])
+        img1 = data.get_image(poke1["species"]).transpose(Image.FLIP_LEFT_RIGHT)
         img2 = data.get_image(poke2["species"])
-        img = Image.new("RGB", (474, 237))
-        img.paste(Image.resize(img1, (0, 0)), (0, 0))
-        img.paste(Image.resize(img2, (237, 0)), (0, 0))
+        img = Image.new("RGB", (360, 180))
+        img.paste(img1.resize((180, 180)), (0, 0))
+        img.paste(img2.resize((180, 180)), (180, 0))
+        uuid = uuid4()
 
-        with io.BytesIO() as binary:
-            img.save(binary, "PNG")
-            binary.seek(0)
-            battle_file = discord.File(fp=binary, filename="battle.png")
+        def battle_file():
+            with io.BytesIO() as binary:
+                img.save(binary, "PNG")
+                binary.seek(0)
+                return discord.File(fp=binary, filename=f"{uuid}.png")
 
         poke1["stat_change"] = [0, 0, 0, 0, 0]
         poke2["stat_change"] = [0, 0, 0, 0, 0]
@@ -85,13 +89,14 @@ class Battle(commands.Cog):
         
         async def send_battle_embed(buttons=None):
             embed = create_embed("Battle", get_text(caption), author=ctx.author)
-            embed.set_image(url="attachment://battle.png")
-            await button_ctx.origin_message.edit(embed=embed, file=battle_file, components=buttons)
+            embed.set_image(url=f"attachment://{uuid}.png")
+            await msg.edit(embed=embed, components=buttons)
         
         async def send_battle_embed2(buttons=[]):
             embed = create_embed("Battle", get_text(caption), author=ctx.author)
-            embed.set_image(url="attachment://battle.png")
-            await button_ctx.edit_origin(embed=embed, file=battle_file, components=buttons)
+            embed.set_image(url=f"attachment://{uuid}.png")
+            await button_ctx.defer(edit_origin=True)
+            await msg.edit(embed=embed, components=buttons)
         
         async def fight(atkname, defname, atkpoke, defpoke, selected, winning, caption):
             if random.randint(0, 99) > data.all_move_data[str(selected)]["acc"]:
@@ -179,14 +184,19 @@ class Battle(commands.Cog):
             return False
 
         caption = f"A wild **{data.pokename(poke2['species'])}** appeared!"
-        msg = await ctx.send(embed=create_embed("Battle", get_text(caption), author=ctx.author))
+        embed = create_embed("Battle", get_text(caption), author=ctx.author)
+        embed.set_image(url=f"attachment://{uuid}.png")
+        msg = await ctx.send(embed=embed, file=battle_file())
         await asyncio.sleep(2)
         caption = f"Go, **{data.pokename(poke1['species'])}**!"
-        await msg.edit(embed=create_embed("Battle", get_text(caption), author=ctx.author))
-        await asyncio.sleep(2)
-        caption = "What would you like to do?"
-
         embed = create_embed("Battle", get_text(caption), author=ctx.author)
+        embed.set_image(url=f"attachment://{uuid}.png")
+        await msg.edit(embed=embed)
+        await asyncio.sleep(2)
+
+        caption = "What would you like to do?"
+        embed = create_embed("Battle", get_text(caption), author=ctx.author)
+        embed.set_image(url=f"attachment://{uuid}.png")
         buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
         await msg.edit(embed=embed, components=[buttons])
         run_count = 0
@@ -315,24 +325,32 @@ class Battle(commands.Cog):
                     caption += f":{data.numbers[i]}: __{data.pokename(poke['species'])}__ **[Level {poke['level']}]** {data.get_condition(poke)} **{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\n"
                 buttons = [create_button(ButtonStyle.green, str(i + 1), disabled=len(database.db["users"][ctx.author.id]["pokemon"]) <= i or database.db["users"][ctx.author.id]["pokemon"][i]["hp"] == 0) for i in range(6)]
                 buttons = [create_actionrow(*buttons[:3]), create_actionrow(*buttons[3:]), create_actionrow(create_button(ButtonStyle.green, "Back"))]
-                await send_battle_embed(buttons)
+                await send_battle_embed2(buttons)
                 button_ctx = await custom_wait(self.bot, msg, buttons)
                 if button_ctx.component["label"] == "Back":
                     caption = "What would you like to do?"
                     buttons = create_actionrow(create_button(ButtonStyle.green, "Fight"), create_button(ButtonStyle.green, "Item"), create_button(ButtonStyle.green, "Pokémon"), create_button(ButtonStyle.green, "Run"))
-                    await send_battle_embed([buttons])
+                    await send_battle_embed2([buttons])
                     continue
                 swap = database.db["users"][ctx.author.id]["pokemon"][int(button_ctx.component["label"]) - 1]
                 if swap == poke1:
                     caption = f"**{data.pokename(poke1['species'])}** is already out on the field!"
-                    await send_battle_embed([])
+                    await send_battle_embed2([])
                     await asyncio.sleep(2)
                 else:
+                    img1 = data.get_image(poke1["species"]).transpose(Image.FLIP_LEFT_RIGHT)
+                    img2 = data.get_image(poke2["species"])
+                    img = Image.new("RGB", (360, 180))
+                    img.paste(img1.resize((180, 180)), (0, 0))
+                    img.paste(img2.resize((180, 180)), (180, 0))
+                    uuid = uuid4()
+
                     caption = f"**{data.pokename(poke1['species'])}**, return!"
-                    await send_battle_embed([])
+                    await send_battle_embed2([])
                     await asyncio.sleep(2)
                     del poke1["stat_change"]
                     poke1 = swap
+                    poke1["stat_change"] = [0, 0, 0, 0, 0]
                     name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
                     caption = f"Go, **{data.pokename(poke1['species'])}**!"
                     await send_battle_embed()

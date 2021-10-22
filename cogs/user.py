@@ -4,8 +4,12 @@ from discord_slash.utils.manage_components import (
     create_actionrow, create_button,create_select, create_select_option)
 from discord_slash.model import ButtonStyle
 from utils import send_embed, create_embed, database, check_start, data, make_hp, custom_wait
+from PIL import Image
+from uuid import uuid4
 import asyncio
+import discord
 import math
+import io
 
 start_text = [
     ["Hello there! Welcome to the", "world of POKéMON!"],
@@ -257,12 +261,22 @@ class User(commands.Cog):
                 text += f"**{data.movename(poke['moves'][i])}** - PP __{poke['pp'][i]} / {data.all_move_data[str(poke['moves'][i])]['pp']}__\n"
 
             buttons = create_actionrow(
-                create_button(ButtonStyle.green, "◀", disabled=page < 2),
+                create_button(ButtonStyle.green, "◀", disabled=page < 1),
                 create_button(ButtonStyle.green, "▶", disabled=page == len(database.db["users"][ctx.author.id]["pokemon"]) - 1))
+            
+            img = data.get_image(poke["species"]).transpose(Image.FLIP_LEFT_RIGHT).resize((180, 180))
+            uuid = uuid4()
+            with io.BytesIO() as binary:
+                img.save(binary, "PNG")
+                binary.seek(0)
+                file = discord.File(fp=binary, filename=f"{uuid}.png")
+            
+            embed = create_embed("Pokémon", text, footer=f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon", author=ctx.author)
+            embed.set_image(url=f"attachment://{uuid}.png")
             if msg is None:
-                msg = await send_embed(ctx, "Pokémon", text, footer=f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon", author=ctx.author, components=[buttons])
+                msg = await ctx.send(embed=embed, file=file, components=[buttons])
             else:
-                await msg.edit(embed=create_embed("Pokémon", text, footer=f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon", author=ctx.author), components=[buttons])
+                await button_ctx.edit_origin(embed=embed, file=file, components=[buttons])
             button_ctx = await custom_wait(self.bot, msg, [buttons])
             if button_ctx.component["label"] == "◀":
                 page -= 1
