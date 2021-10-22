@@ -1,6 +1,6 @@
 from discord.ext import commands, tasks
 from discord_slash import SlashContext
-from utils import send_embed
+from utils import send_embed, database
 import os
 
 class Main(commands.Cog):
@@ -13,6 +13,8 @@ class Main(commands.Cog):
         print("Logged in as:", self.bot.user)
         print("ID:", self.bot.user.id)
         self.restart_checker.start()
+        for server in database.db["servers"].values():
+            server["battling"] = []
 
     @tasks.loop(seconds=2)
     async def restart_checker(self):

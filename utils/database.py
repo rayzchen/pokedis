@@ -22,12 +22,12 @@ class LiveDict:
         elif isinstance(value, list):
             value = LiveList(value)
         self.d[str(item)] = value
-        if isinstance(value, LiveDict):
+        if isinstance(value, (LiveDict, LiveList)):
             value.parent = self
         self.update()
 
     def __delitem__(self, item):
-        self.d.pop(item)
+        self.d.pop(str(item))
         self.update()
 
     def __contains__(self, item):
@@ -55,13 +55,13 @@ class LiveDict:
         return d
 
     def keys(self):
-        return self.todict().keys()
+        return self.d.keys()
 
     def values(self):
-        return self.todict().values()
+        return self.d.values()
 
     def items(self):
-        return self.todict().items()
+        return self.d.items()
 
     def pop(self, item):
         if item in self:
@@ -114,7 +114,12 @@ class LiveList:
             self.parent.update()
     
     def append(self, item):
-        self.l.append(item)
+        if isinstance(item, list):
+            self.l.append(LiveList(item, self))
+        elif isinstance(item, dict):
+            self.l.append(LiveDict(item, self))
+        else:
+            self.l.append(item)
         self.update()
     
     def insert(self, index, item):
