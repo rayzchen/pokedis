@@ -111,6 +111,9 @@ async def custom_wait(bot, message, components):
             if message.embeds[0].title == "Battle":
                 try:
                     await message.reply(embed=create_embed("Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user))
+                    if message.guild.id in database.db["servers"]:
+                        if message.channel.id in database.db["servers"][message.guild.id]["battling"]:
+                            database.db["servers"][message.guild.id]["battling"].remove(message.channel.id)
                 except:
                     raise EndCommand
             if isinstance(components, dict):
