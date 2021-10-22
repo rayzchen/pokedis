@@ -1,6 +1,6 @@
 from discord.ext import commands, tasks
-from discord_slash import SlashContext
-from utils import send_embed, database
+from discord_slash import cog_ext, SlashContext
+from utils import send_embed, create_embed, database
 import os
 
 class Main(commands.Cog):
@@ -28,15 +28,23 @@ class Main(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
-    async def restart(self, ctx: SlashContext):
+    async def restart(self, ctx):
         open("restart", "w+").close()
         await send_embed(ctx, "", "Restarting")
     
     @commands.command()
     @commands.has_permissions(manage_guild=True)
-    async def stop(self, ctx: SlashContext):
+    async def stop(self, ctx):
         open("stop", "w+").close()
         await send_embed(ctx, "", "Stopping")
+    
+    @cog_ext.cog_slash(
+        name="reldb", description="Reload the database",
+        guild_ids=[894254591858851871])
+    async def reldb(self, ctx: SlashContext):
+        message = await send_embed(ctx, "", "Reloading database...")
+        database.db = database.Database("db.json")
+        await message.edit(embed=create_embed("", "Reloaded database!"))
 
 def setup(bot):
     bot.add_cog(Main(bot))

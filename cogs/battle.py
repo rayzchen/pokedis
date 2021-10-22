@@ -245,6 +245,64 @@ class Battle(commands.Cog):
 
         ## MAIN LOOP
         while True:
+            # Check for outcome (in case of switching out pokemon)
+            if outcome == 1:
+                break
+            if outcome == 2:
+                # Switch out
+                caption = f"{name1} fainted!"
+                await send_battle_embed()
+                await asyncio.sleep(2)
+                if all(poke["hp"] == 0 for poke in database.db["users"][ctx.author.id]["pokemon"]):
+                    # Black out
+                    caption = f"**{ctx.author.name}** has no usable pokémon!"
+                    await send_battle_embed()
+                    await asyncio.sleep(2)
+                    caption = f"**{ctx.author.name}** blacked out!"
+                    await send_battle_embed()
+
+                    # Heal pokemon
+                    for poke in database.db["users"][ctx.author.id]["pokemon"]:
+                    poke["status"] = []
+                    poke["hp"] = poke["stats"]["hp"]
+                    data.calc_stats(poke)
+                    for i in range(4):
+                        if poke["moves"][i] == 0:
+                            break
+                        poke["pp"][i] = data.all_move_data[str(poke["moves"][i])]["pp"]
+                    break
+                caption = "Choose a Pokémon.\n\n"
+                for i, poke in enumerate(database.db["users"][ctx.author.id]["pokemon"]):
+                    caption += f":{data.numbers[i]}: __{data.pokename(poke['species'])}__ **[Level {poke['level']}]** {data.get_condition(poke)} **{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\n"
+                buttons = [create_button(ButtonStyle.green, str(i + 1), disabled=len(database.db["users"][ctx.author.id]["pokemon"]) <= i or database.db["users"][ctx.author.id]["pokemon"][i]["hp"] == 0) for i in range(6)]
+                buttons = [create_actionrow(*buttons[:3]), create_actionrow(*buttons[3:])]
+                await send_battle_embed(buttons)
+
+                button_ctx = await custom_wait(self.bot, msg, buttons)
+                swap = database.db["users"][ctx.author.id]["pokemon"][int(button_ctx.component["label"]) - 1]
+                
+                # Regenerate image
+                img1 = data.get_image(swap["species"]).transpose(Image.FLIP_LEFT_RIGHT)
+                img2 = data.get_image(poke2["species"])
+                img = Image.new("RGB", (360, 180))
+                img.paste(img1.resize((180, 180)), (0, 0))
+                img.paste(img2.resize((180, 180)), (180, 0))
+                uuid = uuid4()
+                
+                # Reset pokemon stat changes and then swap
+                del poke1["stat_change"]
+                poke1 = swap
+                poke1["stat_change"] = [0, 0, 0, 0, 0]
+                name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
+
+                caption = f"Go, **{data.pokename(poke1['species'])}**!"
+                await send_battle_embed2([])
+                before = time.perf_counter() # wait 2 secs while image is uploading
+                await msg.edit(file=battle_file())
+
+                remaining = before + 2.0 - time.perf_counter()
+                await asyncio.sleep(remaining)
+
             # Send first prompt
             caption = "What would you like to do?"
             buttons = create_actionrow(
@@ -273,8 +331,8 @@ class Battle(commands.Cog):
                     await send_battle_embed2(buttons)
 
                     button_ctx = await custom_wait(self.bot, msg, buttons)
+                    await button_ctx.defer(edit_origin=True)
                     if button_ctx.component["label"] == "Back":
-                        await button_ctx.defer(edit_origin=True)
                         continue
                     selected = moves[button_ctx.component["label"].split(" - ")[0]]
 
@@ -283,9 +341,8 @@ class Battle(commands.Cog):
                     await player_move(selected)
                     outcome = check_win()
                     if outcome > 0:
-                        break
-                    await send_battle_embed()
-                    player_second_fight = True
+                        continue
+                    player_second_fight = False
             elif action == "Pokémon":
                 # Select pokemon
                 caption = "Choose a Pokémon.\n\n"
@@ -354,13 +411,13 @@ class Battle(commands.Cog):
             await opp_move()
             outcome = check_win()
             if outcome > 0:
-                break
+                continue
 
             if player_second_fight:
                 await player_move(selected)
                 outcome = check_win()
                 if outcome > 0:
-                    break
+                    continue
             await apply_effects()
         
         # After main loop
@@ -419,10 +476,6 @@ class Battle(commands.Cog):
             caption = f"**{ctx.author.name}** earned **$500**!"
             await send_battle_embed()
             await asyncio.sleep(2)
-        elif outcome == 2:
-            # Player loss
-            caption = f"{name1} fainted!"
-            await send_battle_embed()
         if ctx.channel.id in database.db["servers"][ctx.guild.id]["battling"]:
             database.db["servers"][ctx.guild.id]["battling"].remove(ctx.channel.id)
 
