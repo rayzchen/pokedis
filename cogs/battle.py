@@ -263,13 +263,13 @@ class Battle(commands.Cog):
 
                     # Heal pokemon
                     for poke in database.db["users"][ctx.author.id]["pokemon"]:
-                    poke["status"] = []
-                    poke["hp"] = poke["stats"]["hp"]
-                    data.calc_stats(poke)
-                    for i in range(4):
-                        if poke["moves"][i] == 0:
-                            break
-                        poke["pp"][i] = data.all_move_data[str(poke["moves"][i])]["pp"]
+                        poke["status"] = []
+                        poke["hp"] = poke["stats"]["hp"]
+                        data.calc_stats(poke)
+                        for i in range(4):
+                            if poke["moves"][i] == 0:
+                                break
+                            poke["pp"][i] = data.all_move_data[str(poke["moves"][i])]["pp"]
                     break
                 caption = "Choose a Pokémon.\n\n"
                 for i, poke in enumerate(database.db["users"][ctx.author.id]["pokemon"]):
