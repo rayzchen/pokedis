@@ -19,7 +19,9 @@ with open("utils/datafiles/special_moves.json") as f:
 with open("utils/datafiles/effective.json") as f:
     effective_table = json.loads(f.read())
 
-stat_names = ["HP", "Attack", "Defense", "Sp. Attack", "Sp. Defense", "Speed"]
+stat_names = ["HP", "Attack", "Defense", "Special", "Speed", "Accuracy", "Evasion"]
+stat_modifiers1 = [2/2, 3/2, 4/2, 5/2, 6/2, 7/2, 8/2, 2/8, 2/7, 2/6, 2/5, 2/4, 2/3]
+stat_modifiers2 = [3/3, 4/3, 5/3, 6/3, 7/3, 8/3, 9/3, 3/9, 3/8, 3/7, 3/6, 3/5, 3/4]
 conditions = [
     "__burned__!",
     "__frozen__! It cannot move!",
@@ -100,7 +102,7 @@ def get_damage(poke1, poke2, move):
     else:
         stat1 = stat1.copy()
     for i, stat in enumerate(stat1):
-        stat1[stat] += poke1["stat_change"][i]
+        stat1[stat] *= stat_modifiers1[poke1["stat_change"][i]]
     
     stat2 = poke2["stats"]
     if isinstance(stat2, LiveDict):
@@ -108,7 +110,7 @@ def get_damage(poke1, poke2, move):
     else:
         stat2 = stat2.copy()
     for i, stat in enumerate(stat2):
-        stat2[stat] += poke2["stat_change"][i]
+        stat2[stat] *= stat_modifiers1[poke2["stat_change"][i]]
     print(stat1, stat2)
 
     a = (2 * poke1["level"] / 5 + 2) * movedata["power"]
@@ -121,8 +123,8 @@ def get_damage(poke1, poke2, move):
         b *= 1.5
     return b
 
-def is_crit(poke1):
-    return int(random.randint(0, 255) < math.floor(poke1["stats"]["spd"] / 2)) + 1
+def is_crit(poke1, multiplier=1):
+    return int(random.randint(0, 255) < math.floor(min(poke1["stats"]["spd"] / 2 * multiplier, 256))) + 1
 
 def get_effective(move, poke2):
     movedata = all_move_data[str(move)]
@@ -154,7 +156,7 @@ def get_image(species):
     link = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/" + str(species) + ".png"
     url = urllib.request.urlopen(link)
     file = io.BytesIO(url.read())
-    return Image.open(file)
+    return Image.open(file).convert("RGBA")
 
 level_exp = [[calc_exp(i, j) for i in range(1, 101)] for j in (0, 3, 4, 5)]
 level_exp = [level_exp[0], None, None, *level_exp[1:]]

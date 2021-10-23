@@ -1,6 +1,8 @@
 {
+    "28": {"affects": ["adjacent", "any"], "stat": 5, "change": -1},
     "39": {"affects": ["adjacent", "foe"], "stat": 2, "change": -1},
     "45": {"affects": ["adjacent", "foe"], "stat": 1, "change": -1},
-    "52": {},
+    "52": {"affects": ["adjacent", "foe"], "effect": "burn"},
+    "116": {"affects": ["self", "ally"], "critical": 4},
     "145": {"affects": ["adjacent", "foe"], "stat": 4, "change": -1, "acc": 10}
 }

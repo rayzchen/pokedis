@@ -248,6 +248,7 @@ class User(commands.Cog):
     async def pokemon(self, ctx: SlashContext):
         page = 0
         msg = None
+        button_ctx = None
         while True:
             text = ""
             poke = database.db["users"][ctx.author.id]["pokemon"][page]
@@ -264,19 +265,12 @@ class User(commands.Cog):
                 create_button(ButtonStyle.green, "◀", disabled=page < 1),
                 create_button(ButtonStyle.green, "▶", disabled=page == len(database.db["users"][ctx.author.id]["pokemon"]) - 1))
             
-            img = data.get_image(poke["species"]).transpose(Image.FLIP_LEFT_RIGHT).resize((180, 180))
-            uuid = uuid4()
-            with io.BytesIO() as binary:
-                img.save(binary, "PNG")
-                binary.seek(0)
-                file = discord.File(fp=binary, filename=f"{uuid}.png")
-            
             embed = create_embed("Pokémon", text, footer=f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon", author=ctx.author)
-            embed.set_image(url=f"attachment://{uuid}.png")
+            embed.set_image(url="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/" + str(poke["species"]) + ".png")
             if msg is None:
-                msg = await ctx.send(embed=embed, file=file, components=[buttons])
+                msg = await ctx.send(embed=embed, components=[buttons])
             else:
-                await button_ctx.edit_origin(embed=embed, file=file, components=[buttons])
+                await button_ctx.edit_origin(embed=embed, components=[buttons])
             button_ctx = await custom_wait(self.bot, msg, [buttons])
             if button_ctx.component["label"] == "◀":
                 page -= 1

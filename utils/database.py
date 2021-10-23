@@ -70,6 +70,9 @@ class LiveDict:
             self.update()
             return val
         raise KeyError(item)
+    
+    def get(self, key, default=None):
+        return self.d.get(key, default)
 
 class LiveList:
     def __init__(self, l, parent=None):

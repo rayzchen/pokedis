@@ -1,10 +1,15 @@
 {
     "10": {"name": "Scratch", "pp": 35, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "normal"},
     "16": {"name": "Gust", "pp": 35, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "flying"},
+    "28": {"name": "Sand Attack", "pp": 15, "power": 0, "acc": 100, "effect": 1, "special": 0, "type": "ground"},
     "33": {"name": "Tackle", "pp": 35, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "normal"},
     "39": {"name": "Tail Whip", "pp": 30, "power": 0, "acc": 100, "effect": 1, "special": 0, "type": "normal"},
     "45": {"name": "Growl", "pp": 40, "power": 0, "acc": 100, "effect": 1, "special": 0, "type": "normal"},
     "52": {"name": "Ember", "pp": 25, "power": 40, "acc": 100, "effect": 0, "special": 1, "type": "fire"},
+    "98": {"name": "Quick Attack", "pp": 30, "power": 40, "acc": 100, "priority": 1, "effect": 0, "special": 0, "type": "normal"},
+    "116": {"name": "Focus Energy", "pp": 30, "power": 0, "acc": 100, "effect": 1, "special": 0, "type": "normal"},
     "145": {"name": "Bubble", "pp": 30, "power": 40, "acc": 100, "effect": 0, "special": 1, "type": "water"},
-    "165": {"name": "Struggle", "pp": 1, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "normal"}
+    "162": {"name": "Super Fang", "pp": 10, "power": 0, "acc": 90, "effect": 1, "special": 0, "type": "normal"},
+    "165": {"name": "Struggle", "pp": 1, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "normal"},
+    "158": {"name": "Hyper Fang", "pp": 15, "power": 80, "acc": 90, "effect": 0, "special": 0, "type": "normal"}
 }

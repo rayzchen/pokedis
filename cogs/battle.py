@@ -4,14 +4,11 @@ from discord_slash.utils.manage_components import (
     create_actionrow, create_button)
 from discord_slash.model import ButtonStyle
 from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait, EndCommand
-from PIL import Image
 from uuid import uuid4
 import asyncio
-import discord
 import random
 import math
 import time
-import io
 
 effectiveness = {
     0: "It was not effective at all!",
@@ -56,28 +53,15 @@ class Battle(commands.Cog):
                 break
         else:
             raise EndCommand
-        poke2 = data.gen_pokemon(19, 2)
+        poke2 = data.gen_pokemon(random.choice([16, 19]), poke1["level"] + random.randint(-2, 2))
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
 
-        poke1["stat_change"] = [0, 0, 0, 0, 0]
-        poke2["stat_change"] = [0, 0, 0, 0, 0]
+        # HP ATK DEF SP SPD ACC EV
+        poke1["stat_change"] = [0, 0, 0, 0, 0, 0, 0]
+        poke2["stat_change"] = [0, 0, 0, 0, 0, 0, 0]
 
         registers = [{}, {}]
-
-        # Generate image
-        img1 = data.get_image(poke1["species"]).transpose(Image.FLIP_LEFT_RIGHT)
-        img2 = data.get_image(poke2["species"])
-        img = Image.new("RGB", (360, 180))
-        img.paste(img1.resize((180, 180)), (0, 0))
-        img.paste(img2.resize((180, 180)), (180, 0))
-        uuid = uuid4()
-
-        def battle_file():
-            with io.BytesIO() as binary:
-                img.save(binary, "PNG")
-                binary.seek(0)
-                return discord.File(fp=binary, filename=f"{uuid}.png")
 
         # Battle embed functions
         caption = ""
@@ -94,12 +78,23 @@ class Battle(commands.Cog):
                 f"{caption}"
             ])
         
+        uuid = [poke1["species"], poke2["species"], uuid4()]
+        def get_image_link():
+            if poke1["species"] != uuid[0]:
+                uuid[0] = poke1["species"]
+                uuid[2] = uuid4()
+            elif poke2["species"] != uuid[1]:
+                uuid[1] = poke2["species"]
+                uuid[2] = uuid4()
+
+            return f"https://pokedis.rayzchen.repl.co/image?a={poke1['species']}&b={poke2['species']}&uuid={uuid[2]}"
+        
         async def send_battle_embed(buttons=None, cpt=None):
             if cpt is not None:
                 embed = create_embed("Battle", get_text(cpt), author=ctx.author)
             else:
                 embed = create_embed("Battle", get_text(caption), author=ctx.author)
-            embed.set_image(url=f"attachment://{uuid}.png")
+            embed.set_image(url=get_image_link())
             await msg.edit(embed=embed, components=buttons)
         
         async def send_battle_embed2(buttons=[], cpt=None):
@@ -118,9 +113,11 @@ class Battle(commands.Cog):
         
         async def fight(atkpoke, defpoke, atkname, defname, selected):
             caption = f"{atkname} uses {data.movename(selected)}!"
+            num = int(atkpoke is poke2)
 
             # Accuracy check
-            if random.randint(0, 99) > data.all_move_data[str(selected)]["acc"]:
+            acc_threshold = random.randint(0, 100) * data.stat_modifiers2[atkpoke["stat_change"][5]] * data.stat_modifiers2[-defpoke["stat_change"][6]]
+            if acc_threshold > data.all_move_data[str(selected)]["acc"]:
                 await send_battle_embed(cpt=caption)
                 await asyncio.sleep(2)
                 caption = f"{atkname} missed!"
@@ -132,7 +129,7 @@ class Battle(commands.Cog):
             if data.all_move_data[str(selected)]["effect"] != 1:
                 # Physical damage
                 dmg = data.get_damage(atkpoke, defpoke, selected)
-                crit = data.is_crit(atkpoke)
+                crit = data.is_crit(atkpoke, registers[num].get("crit", 1))
                 if crit == 2:
                     caption += " **CRITICAL HIT!**"
                 effective = data.get_effective(selected, defpoke)
@@ -141,9 +138,10 @@ class Battle(commands.Cog):
                     caption += "\n" + effectiveness[effective]
                 if defpoke["hp"] <= 0:
                     defpoke["hp"] = 0
-                    return
                 await send_battle_embed(cpt=caption)
                 await asyncio.sleep(2)
+                if defpoke["hp"] == 0:
+                    return
                 
                 # Special move (not status)
                 if str(selected) in data.special_move_data:
@@ -178,12 +176,12 @@ class Battle(commands.Cog):
             else:
                 # Status move
                 caption += "\nSpecial effect!"
-                await send_battle_embed(cpt=caption)
-                await asyncio.sleep(2)
                 spec_move = data.special_move_data[str(selected)]
 
                 # Targets
-                if "foe" in spec_move["affects"]:
+                # [adjacent foe][adjacent foe]
+                # [self ally]   [adjacent ally]
+                if spec_move["affects"][1] in ["foe", "any"]:
                     affected = (defpoke, defname)
                 else:
                     affected = (atkpoke, atkname)
@@ -191,31 +189,39 @@ class Battle(commands.Cog):
                 if "stat" in spec_move:
                     # Stat modifier
                     affected[0]["stat_change"][spec_move["stat"]] += spec_move["change"]
-                    caption = f"{affected[1]}'s **{data.stat_names[spec_move['stat']]}** stat was "
+                    new_caption = f"{affected[1]}'s **{data.stat_names[spec_move['stat']]}** stat was "
                     if spec_move["change"] > 0:
-                        caption += "raised!"
+                        new_caption += "raised!"
                     else:
-                        caption += "lowered!"
+                        new_caption += "lowered!"
                     
                     change = affected[0]["stat_change"][spec_move["stat"]]
-                    original = list(affected[0]["stats"].values())[spec_move["stat"]]
-                    if change + original <= 0:
-                        # Reset if effective stat is 0
-                        caption = "It had no effect!"
-                        affected[0]["stat_change"][spec_move["stat"]] = original
+                    if abs(change) > 6:
+                        # Clamp to -6 and 6
+                        new_caption = "It had no effect!"
+                        affected[0]["stat_change"][spec_move["stat"]] = min(max(change, -6), 6)
                 elif "condition" in spec_move:
                     # Apply condition
                     if data.condition_resist[spec_move["condition"]] in defpoke["types"]:
                         # Resistant type
-                        caption = "It had no effect!"
+                        new_caption = "It had no effect!"
                     else:
                         affected[0]["status"].append(spec_move["condition"])
-                        caption = f"{affected[1]} is {data.conditions[spec_move['condition']]}"
+                        new_caption = f"{affected[1]} is {data.conditions[spec_move['condition']]}"
                         if spec_move["condition"] == 4:
                             # Badly poisoned turn counter
                             registers["bad_psn_turn"] = 0
+                elif "critical" in spec_move:
+                    registers[num]["crit"] = spec_move["critical"]
+                    new_caption = f"{atkname}'s critical hit ratio rose!"
+                elif selected == 162:
+                    poke2["hp"] -= min(1, poke2["hp"] // 2)
+                    new_caption = ""
                 await send_battle_embed(cpt=caption)
                 await asyncio.sleep(2)
+                if new_caption:
+                    await send_battle_embed(cpt=new_caption)
+                    await asyncio.sleep(2)
         
         def check_win():
             if poke2["hp"] <= 0:
@@ -231,8 +237,8 @@ class Battle(commands.Cog):
 
         caption = f"A wild **{data.pokename(poke2['species'])}** appeared!"
         embed = create_embed("Battle", get_text(caption), author=ctx.author)
-        embed.set_image(url=f"attachment://{uuid}.png")
-        msg = await ctx.send(embed=embed, file=battle_file())
+        embed.set_image(url=get_image_link())
+        msg = await ctx.send(embed=embed)
         await asyncio.sleep(2)
 
         caption = f"Go, **{data.pokename(poke1['species'])}**!"
@@ -281,24 +287,15 @@ class Battle(commands.Cog):
                 button_ctx = await custom_wait(self.bot, msg, buttons)
                 swap = database.db["users"][ctx.author.id]["pokemon"][int(button_ctx.component["label"]) - 1]
                 
-                # Regenerate image
-                img1 = data.get_image(swap["species"]).transpose(Image.FLIP_LEFT_RIGHT)
-                img2 = data.get_image(poke2["species"])
-                img = Image.new("RGB", (360, 180))
-                img.paste(img1.resize((180, 180)), (0, 0))
-                img.paste(img2.resize((180, 180)), (180, 0))
-                uuid = uuid4()
-                
                 # Reset pokemon stat changes and then swap
                 del poke1["stat_change"]
                 poke1 = swap
-                poke1["stat_change"] = [0, 0, 0, 0, 0]
+                poke1["stat_change"] = [0, 0, 0, 0, 0, 0, 0]
                 name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
 
                 caption = f"Go, **{data.pokename(poke1['species'])}**!"
-                await send_battle_embed2([])
                 before = time.perf_counter() # wait 2 secs while image is uploading
-                await msg.edit(file=battle_file())
+                await send_battle_embed2([])
 
                 remaining = before + 2.0 - time.perf_counter()
                 await asyncio.sleep(remaining)
@@ -366,18 +363,9 @@ class Battle(commands.Cog):
                     await asyncio.sleep(2)
                     continue
                 
-                # Regenerate image
-                img1 = data.get_image(swap["species"]).transpose(Image.FLIP_LEFT_RIGHT)
-                img2 = data.get_image(poke2["species"])
-                img = Image.new("RGB", (360, 180))
-                img.paste(img1.resize((180, 180)), (0, 0))
-                img.paste(img2.resize((180, 180)), (180, 0))
-                uuid = uuid4()
-                
                 caption = f"**{data.pokename(poke1['species'])}**, return!"
-                await send_battle_embed2([])
                 before = time.perf_counter() # wait 2 secs while image is uploading
-                await msg.edit(file=battle_file())
+                await send_battle_embed2([])
 
                 # Reset pokemon stat changes and then swap
                 del poke1["stat_change"]
@@ -396,6 +384,7 @@ class Battle(commands.Cog):
                 caption = "Not implemented yet!"
                 await send_battle_embed2()
                 await asyncio.sleep(2)
+                player_second_fight = False
             elif action == "Run":
                 # Check run status
                 auto = math.floor(poke2["stats"]["spd"] / 4) % 256
