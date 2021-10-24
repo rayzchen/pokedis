@@ -6,6 +6,7 @@ from discord_slash.model import ButtonStyle
 from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait, EndCommand
 from uuid import uuid4
 import asyncio
+import inspect
 import random
 import math
 import time
@@ -18,6 +19,18 @@ effectiveness = {
     2: "It was super effective!",
     4: "It was extremely effective!",
 }
+
+def remove_channel_from_db(func):
+    async def inner(self, ctx):
+        try:
+            await func(self, ctx)
+        except:
+            if ctx.channel.id in database.db["servers"][ctx.guild.id]["battling"]:
+                database.db["servers"][ctx.guild.id]["battling"].remove(ctx.channel.id)
+            raise
+    inner.__annotations__ = func.__annotations__
+    inner.__signature__ = inspect.signature(func)
+    return inner
 
 class Battle(commands.Cog):
     def __init__(self, bot):
@@ -36,6 +49,7 @@ class Battle(commands.Cog):
     @cog_ext.cog_slash(
         name="battle", description="Test battle",
         guild_ids=[894254591858851871])
+    @remove_channel_from_db
     @check_start
     async def battle(self, ctx: SlashContext):
         # Check battling status
@@ -112,18 +126,20 @@ class Battle(commands.Cog):
             await fight(poke2, poke1, name2, name1, move)
         
         async def fight(atkpoke, defpoke, atkname, defname, selected):
-            caption = f"{atkname} uses {data.movename(selected)}!"
+            caption = f"{atkname} used __{data.movename(selected)}__!"
             num = int(atkpoke is poke2)
 
             # Accuracy check
-            acc_threshold = random.randint(0, 100) * data.stat_modifiers2[atkpoke["stat_change"][5]] * data.stat_modifiers2[-defpoke["stat_change"][6]]
-            if acc_threshold > data.all_move_data[str(selected)]["acc"]:
-                await send_battle_embed(cpt=caption)
-                await asyncio.sleep(2)
-                caption = f"{atkname} missed!"
-                await send_battle_embed(cpt=caption)
-                await asyncio.sleep(2)
-                return
+            # 0 accuracy means bypass accuracy checks
+            if data.all_move_data[str(selected)]["acc"] != 0:
+                acc_threshold = random.randint(0, 100) * data.stat_modifiers2[atkpoke["stat_change"][5]] * data.stat_modifiers2[-defpoke["stat_change"][6]]
+                if acc_threshold > data.all_move_data[str(selected)]["acc"]:
+                    await send_battle_embed(cpt=caption)
+                    await asyncio.sleep(2)
+                    caption = f"{atkname} missed!"
+                    await send_battle_embed(cpt=caption)
+                    await asyncio.sleep(2)
+                    return
             
             # Type of move
             if data.all_move_data[str(selected)]["effect"] != 1:
@@ -156,6 +172,8 @@ class Battle(commands.Cog):
                             if data.condition_resist[spec_move["condition"]] not in defpoke["types"]:
                                 defpoke["status"].append(spec_move["condition"])
                                 caption = f"{defname} is {data.conditions[spec_move['condition']]}"
+                                await send_battle_embed(cpt=caption)
+                                await asyncio.sleep(2)
                         elif "stat" in spec_move:
                             # Changes stat
                             defpoke["stat_change"][spec_move["stat"]] += spec_move["change"]
@@ -174,7 +192,7 @@ class Battle(commands.Cog):
                                 await send_battle_embed(cpt=caption)
                                 await asyncio.sleep(2)
             else:
-                # Status move
+                # Status move (or special damage calc)
                 caption += "\nSpecial effect!"
                 spec_move = data.special_move_data[str(selected)]
 
@@ -214,9 +232,22 @@ class Battle(commands.Cog):
                 elif "critical" in spec_move:
                     registers[num]["crit"] = spec_move["critical"]
                     new_caption = f"{atkname}'s critical hit ratio rose!"
+                
+                ## Special moves (set effect to 1 and dont use anything above)
+                elif selected == 73:
+                    # Leech seed
+                    if "seed" in registers[num]:
+                        new_caption = "Nothing happened!"
+                    else:
+                        registers[num]["seed"] = 1
+                        new_caption = f"A seed was planted in {defname}!"
+                        if "grass" in defpoke["types"]:
+                            new_caption += "\nIt doesn't affect it!"
                 elif selected == 162:
+                    # Super fang
                     poke2["hp"] -= min(1, poke2["hp"] // 2)
                     new_caption = ""
+                
                 await send_battle_embed(cpt=caption)
                 await asyncio.sleep(2)
                 if new_caption:
@@ -232,8 +263,33 @@ class Battle(commands.Cog):
                 return 2
             return 0
         
+        async def apply_effect(poke, name):
+            if 0 in poke["status"]:
+                dmg = poke["stats"]["hp"] // 8
+                poke["hp"] -= dmg
+                if poke["hp"] < 0:
+                    poke["hp"] = 0
+                caption = f"{name} suffered __Burn__ damage!"
+                await send_battle_embed(cpt=caption)
+                if poke["hp"] == 0:
+                    return True
+            elif 3 in poke["status"]:
+                dmg = poke["stats"]["hp"] // 8
+                poke["hp"] -= dmg
+                if poke["hp"] < 0:
+                    poke["hp"] = 0
+                caption = f"{name} suffered __Poison__ damage!"
+                await send_battle_embed(cpt=caption)
+                an
+                if poke["hp"] == 0:
+                    return True
+
+        
         async def apply_effects():
-            pass
+            ret = await apply_effect(poke1, name1)
+            if ret:
+                return
+            await apply_effect(poke2, name2)
 
         caption = f"A wild **{data.pokename(poke2['species'])}** appeared!"
         embed = create_embed("Battle", get_text(caption), author=ctx.author)
@@ -370,7 +426,7 @@ class Battle(commands.Cog):
                 # Reset pokemon stat changes and then swap
                 del poke1["stat_change"]
                 poke1 = swap
-                poke1["stat_change"] = [0, 0, 0, 0, 0]
+                poke1["stat_change"] = [0, 0, 0, 0, 0, 0, 0]
                 name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
 
                 caption = f"Go, **{data.pokename(poke1['species'])}**!"
@@ -394,6 +450,9 @@ class Battle(commands.Cog):
                 if escape:
                     has_run_away = True
                     break
+                caption = "Not fast enough!"
+                await send_battle_embed2()
+                await asyncio.sleep(2)
                 player_second_fight = False
             
             # Opponent's turn
@@ -407,7 +466,9 @@ class Battle(commands.Cog):
                 outcome = check_win()
                 if outcome > 0:
                     continue
+            
             await apply_effects()
+            outcome = check_win()
         
         # After main loop
         if has_run_away:
@@ -452,11 +513,14 @@ class Battle(commands.Cog):
                         button_ctx = await custom_wait(self.bot, msg, components)
                         forget = int(button_ctx.component["label"][0]) - 1
                         poke1["moves"][forget] = move
+                        poke1["pp"][forget] = data.all_move_data[str(move)]["pp"]
                         caption = f"{name1} forgot **{button_ctx.component['label'][4:]}** and learnt **{movedata['name']}**!"
                         await send_battle_embed2()
                     else:
                         # Add move
-                        poke1["moves"][poke1["moves"].index(0)] = move
+                        idx = poke1["moves"].index(0)
+                        poke1["moves"][idx] = move
+                        poke1["pp"][idx] = data.all_move_data[str(move)]["pp"]
                         caption = f"{name1} learnt **{movedata['name']}**!"
                         await send_battle_embed()
                     await asyncio.sleep(2)
@@ -465,8 +529,6 @@ class Battle(commands.Cog):
             caption = f"**{ctx.author.name}** earned **$500**!"
             await send_battle_embed()
             await asyncio.sleep(2)
-        if ctx.channel.id in database.db["servers"][ctx.guild.id]["battling"]:
-            database.db["servers"][ctx.guild.id]["battling"].remove(ctx.channel.id)
 
 def setup(bot):
     bot.add_cog(Battle(bot))

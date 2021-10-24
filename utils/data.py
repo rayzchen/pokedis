@@ -28,9 +28,10 @@ conditions = [
     "__paralyzed__! It might not attack!",
     "__poisoned__!",
     "__badly spoisoned__!",
+    "__sleeping__!"
 ]
-condition_names = ["BRN", "FRZ", "PAR", "PSN", "PSN"]
-condition_resist = ["fire", "ice", "electric", "poison", "poison"]
+condition_names = ["BRN", "FRZ", "PAR", "PSN", "PSN", "SLP"]
+condition_resist = ["fire", "ice", "electric", "poison", "poison", ""]
 
 numbers = ["one", "two", "three", "four", "five", "six"]
 
@@ -87,11 +88,14 @@ def gen_pokemon(species, level):
         if str(i) in all_pokemon_data[species]["learnset"]:
             if 0 in poke["moves"]:
                 idx = poke["moves"].index(0)
-                poke["moves"].pop(idx)
-                poke["moves"].insert(idx, all_pokemon_data[species]["learnset"][str(i)])
+                move = all_pokemon_data[species]["learnset"][str(i)]
+                poke["moves"][idx] = move
+                poke["pp"][idx] = all_move_data[str(move)]["pp"]
             else:
                 poke["moves"].pop(0)
                 poke["moves"].append(all_pokemon_data[species]["learnset"][str(i)])
+                poke["pp"].pop(0)
+                poke["pp"].append(all_move_data[str(move)]["pp"])
     return poke
 
 def get_damage(poke1, poke2, move):
@@ -130,7 +134,7 @@ def get_effective(move, poke2):
     movedata = all_move_data[str(move)]
     effective = effective_table[movedata["type"]][poke2["types"][0]]
     if poke2["types"][1] != poke2["types"][0]:
-        effective *= effective_table[movedata["type"], poke2["types"][1]]
+        effective *= effective_table[movedata["type"]][poke2["types"][1]]
     return effective
 
 def pokename(idx):
