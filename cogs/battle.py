@@ -1,3 +1,4 @@
+# https://lucid.app/lucidchart/6a31915f-042e-4dec-be20-18997ad19643/edit?beaconFlowId=81B1E0515BD675DB&invitationId=inv_997cb4a9-99c5-469c-b13a-b3065593fccd&page=0_0#
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
@@ -24,10 +25,9 @@ def remove_channel_from_db(func):
     async def inner(self, ctx):
         try:
             await func(self, ctx)
-        except:
+        finally:
             if ctx.channel.id in database.db["servers"][ctx.guild.id]["battling"]:
                 database.db["servers"][ctx.guild.id]["battling"].remove(ctx.channel.id)
-            raise
     inner.__annotations__ = func.__annotations__
     inner.__signature__ = inspect.signature(func)
     return inner
@@ -67,7 +67,9 @@ class Battle(commands.Cog):
                 break
         else:
             raise EndCommand
-        poke2 = data.gen_pokemon(random.choice([16, 19]), poke1["level"] + random.randint(-2, 2))
+        participated = [poke1]
+
+        poke2 = data.gen_pokemon(random.choice([16, 16]), poke1["level"] + random.randint(-2, 2))
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
 
@@ -92,16 +94,19 @@ class Battle(commands.Cog):
                 f"{caption}"
             ])
         
-        uuid = [poke1["species"], poke2["species"], uuid4()]
-        def get_image_link():
-            if poke1["species"] != uuid[0]:
-                uuid[0] = poke1["species"]
-                uuid[2] = uuid4()
-            elif poke2["species"] != uuid[1]:
-                uuid[1] = poke2["species"]
-                uuid[2] = uuid4()
+        # uuid = [poke1["species"], poke2["species"], uuid4()]
+        # def get_image_link():
+        #     if poke1["species"] != uuid[0]:
+        #         uuid[0] = poke1["species"]
+        #         uuid[2] = uuid4()
+        #     elif poke2["species"] != uuid[1]:
+        #         uuid[1] = poke2["species"]
+        #         uuid[2] = uuid4()
+            
+        #     return f"https://pokedis.rayzchen.repl.co/image?a={poke1['species']}&b={poke2['species']}&uuid={uuid[2]}"
 
-            return f"https://pokedis.rayzchen.repl.co/image?a={poke1['species']}&b={poke2['species']}&uuid={uuid[2]}"
+        def get_image_link():
+            return f"https://pokedis.rayzchen.repl.co/image?a={poke1['species']}&b={poke2['species']}"
         
         async def send_battle_embed(buttons=None, cpt=None):
             if cpt is not None:
@@ -169,7 +174,7 @@ class Battle(commands.Cog):
                     if flag:
                         if "condition" in spec_move:
                             # Applies condition
-                            if data.condition_resist[spec_move["condition"]] not in defpoke["types"]:
+                            if data.condition_resist[spec_move["condition"]] not in defpoke["types"] and spec_move["condition"] not in defpoke["status"]:
                                 defpoke["status"].append(spec_move["condition"])
                                 caption = f"{defname} is {data.conditions[spec_move['condition']]}"
                                 await send_battle_embed(cpt=caption)
@@ -204,6 +209,7 @@ class Battle(commands.Cog):
                 else:
                     affected = (atkpoke, atkname)
                 
+                end = False # for whirlwind
                 if "stat" in spec_move:
                     # Stat modifier
                     affected[0]["stat_change"][spec_move["stat"]] += spec_move["change"]
@@ -234,6 +240,10 @@ class Battle(commands.Cog):
                     new_caption = f"{atkname}'s critical hit ratio rose!"
                 
                 ## Special moves (set effect to 1 and dont use anything above)
+                elif selected == 18:
+                    # Whirlwind
+                    new_caption = f"{atkname} blew {defname} away!"
+                    end = True
                 elif selected == 73:
                     # Leech seed
                     if "seed" in registers[num]:
@@ -253,6 +263,9 @@ class Battle(commands.Cog):
                 if new_caption:
                     await send_battle_embed(cpt=new_caption)
                     await asyncio.sleep(2)
+                
+                if end:
+                    raise EndCommand
         
         def check_win():
             if poke2["hp"] <= 0:
@@ -271,6 +284,7 @@ class Battle(commands.Cog):
                     poke["hp"] = 0
                 caption = f"{name} suffered __Burn__ damage!"
                 await send_battle_embed(cpt=caption)
+                await asyncio.sleep(2)
                 if poke["hp"] == 0:
                     return True
             elif 3 in poke["status"]:
@@ -280,10 +294,10 @@ class Battle(commands.Cog):
                     poke["hp"] = 0
                 caption = f"{name} suffered __Poison__ damage!"
                 await send_battle_embed(cpt=caption)
-                an
+                await asyncio.sleep(2)
                 if poke["hp"] == 0:
                     return True
-
+            return False
         
         async def apply_effects():
             ret = await apply_effect(poke1, name1)
@@ -348,6 +362,8 @@ class Battle(commands.Cog):
                 poke1 = swap
                 poke1["stat_change"] = [0, 0, 0, 0, 0, 0, 0]
                 name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
+                if poke1 not in participated:
+                    participated.append(poke1)
 
                 caption = f"Go, **{data.pokename(poke1['species'])}**!"
                 before = time.perf_counter() # wait 2 secs while image is uploading
@@ -428,6 +444,8 @@ class Battle(commands.Cog):
                 poke1 = swap
                 poke1["stat_change"] = [0, 0, 0, 0, 0, 0, 0]
                 name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
+                if poke1 not in participated:
+                    participated.append(poke1)
 
                 caption = f"Go, **{data.pokename(poke1['species'])}**!"
                 remaining = before + 2.0 - time.perf_counter()
@@ -481,49 +499,51 @@ class Battle(commands.Cog):
             await asyncio.sleep(2)
 
             # Earn XP
-            gain = data.calc_exp_gain(ctx.author.id, poke1, poke2, True)
-            poke1["exp"] += gain
-            caption = f"{name1} earned **{gain} EXP**!"
-            await send_battle_embed()
-            await asyncio.sleep(2)
-
-            # Increase EV
-            lvl = data.get_level(poke1["exp"], data.all_pokemon_data[str(poke1["species"])]["growth"])
-            for i in range(5):
-                poke1["ev"][i] += data.all_pokemon_data[str(poke2["species"])]["base"][i]
-
-            # Level up
-            if lvl != poke1["level"]:
-                caption = f"{name1} levelled up! {poke1['level']} -> {lvl}\n"
-                poke1["level"] = lvl
-                data.calc_stats(poke1)
-                caption += f"ATK -> {poke1['stats']['atk']} DEF -> {poke1['stats']['def']}\nSPEC -> {poke1['stats']['spec']} SPD -> {poke1['stats']['spd']}"
+            gain = data.calc_exp_gain(ctx.author.id, poke1, poke2, True) // len(participated)
+            for poke in participated:
+                # Loop through each pokemon
+                poke1["exp"] += gain
+                caption = f"{name1} earned **{gain} EXP**!"
                 await send_battle_embed()
-                await asyncio.sleep(4)
+                await asyncio.sleep(2)
 
-                # Check new moves
-                if str(lvl) in data.all_pokemon_data[str(poke1["species"])]["learnset"]:
-                    move = data.all_pokemon_data[str(poke1["species"])]["learnset"][str(lvl)]
-                    movedata = data.all_move_data[str(move)]
-                    if 0 not in poke1["moves"]:
-                        # Forget move
-                        caption = f"{name1} is trying to learn **{movedata['name']}**, but it already knows 4 moves!\nWhich move would you like it to forget?"
-                        components = [create_actionrow(create_button(ButtonStyle.green, f"{i} - " + data.all_move_data[str(move)]["name"])) for i, move in enumerate(poke1["moves"])]
-                        await send_battle_embed(components)
-                        button_ctx = await custom_wait(self.bot, msg, components)
-                        forget = int(button_ctx.component["label"][0]) - 1
-                        poke1["moves"][forget] = move
-                        poke1["pp"][forget] = data.all_move_data[str(move)]["pp"]
-                        caption = f"{name1} forgot **{button_ctx.component['label'][4:]}** and learnt **{movedata['name']}**!"
-                        await send_battle_embed2()
-                    else:
-                        # Add move
-                        idx = poke1["moves"].index(0)
-                        poke1["moves"][idx] = move
-                        poke1["pp"][idx] = data.all_move_data[str(move)]["pp"]
-                        caption = f"{name1} learnt **{movedata['name']}**!"
-                        await send_battle_embed()
-                    await asyncio.sleep(2)
+                # Increase EV
+                lvl = data.get_level(poke1["exp"], data.all_pokemon_data[str(poke1["species"])]["growth"])
+                for i in range(5):
+                    poke1["ev"][i] += data.all_pokemon_data[str(poke2["species"])]["base"][i]
+
+                # Level up
+                if lvl != poke1["level"]:
+                    caption = f"{name1} levelled up! {poke1['level']} -> {lvl}\n"
+                    poke1["level"] = lvl
+                    data.calc_stats(poke1)
+                    caption += f"ATK -> {poke1['stats']['atk']} DEF -> {poke1['stats']['def']}\nSPEC -> {poke1['stats']['spec']} SPD -> {poke1['stats']['spd']}"
+                    await send_battle_embed()
+                    await asyncio.sleep(4)
+
+                    # Check new moves
+                    if str(lvl) in data.all_pokemon_data[str(poke1["species"])]["learnset"]:
+                        move = data.all_pokemon_data[str(poke1["species"])]["learnset"][str(lvl)]
+                        movedata = data.all_move_data[str(move)]
+                        if 0 not in poke1["moves"]:
+                            # Forget move
+                            caption = f"{name1} is trying to learn **{movedata['name']}**, but it already knows 4 moves!\nWhich move would you like it to forget?"
+                            components = [create_actionrow(create_button(ButtonStyle.green, f"{i} - " + data.all_move_data[str(move)]["name"])) for i, move in enumerate(poke1["moves"])]
+                            await send_battle_embed(components)
+                            button_ctx = await custom_wait(self.bot, msg, components)
+                            forget = int(button_ctx.component["label"][0]) - 1
+                            poke1["moves"][forget] = move
+                            poke1["pp"][forget] = data.all_move_data[str(move)]["pp"]
+                            caption = f"{name1} forgot **{button_ctx.component['label'][4:]}** and learnt **{movedata['name']}**!"
+                            await send_battle_embed2()
+                        else:
+                            # Add move
+                            idx = poke1["moves"].index(0)
+                            poke1["moves"][idx] = move
+                            poke1["pp"][idx] = data.all_move_data[str(move)]["pp"]
+                            caption = f"{name1} learnt **{movedata['name']}**!"
+                            await send_battle_embed()
+                        await asyncio.sleep(2)
             
             # Add cash (temporarily)
             caption = f"**{ctx.author.name}** earned **$500**!"

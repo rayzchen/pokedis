@@ -1,6 +1,7 @@
 {
     "10": {"name": "Scratch", "pp": 35, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "normal"},
     "16": {"name": "Gust", "pp": 35, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "flying"},
+    "18": {"name": "Whirlwind", "pp": 20, "power": 0, "acc": 85, "effect": 1, "special": 0, "type": "flying"},
     "22": {"name": "Vine Whip", "pp": 25, "power": 45, "acc": 100, "effect": 0, "special": 0, "type": "grass"},
     "28": {"name": "Sand Attack", "pp": 15, "power": 0, "acc": 100, "effect": 1, "special": 0, "type": "ground"},
     "33": {"name": "Tackle", "pp": 35, "power": 40, "acc": 100, "effect": 0, "special": 0, "type": "normal"},

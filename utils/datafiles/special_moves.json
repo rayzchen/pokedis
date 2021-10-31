@@ -1,8 +1,9 @@
 {
+    "18": {"affects": ["adjacent", "any"]},
     "28": {"affects": ["adjacent", "any"], "stat": 5, "change": -1},
     "39": {"affects": ["adjacent", "foe"], "stat": 2, "change": -1},
     "45": {"affects": ["adjacent", "foe"], "stat": 1, "change": -1},
-    "52": {"affects": ["adjacent", "foe"], "condition": 0},
+    "52": {"affects": ["adjacent", "foe"], "condition": 0, "acc": 10},
     "73": {"affects": ["adjacent", "any"]},
     "74": {"affects": ["self", "ally"], "stat": 3, "change": 1},
     "76": {"affects": ["adjacent", "any"], "condition": 5},
