@@ -1,9 +1,7 @@
 import flask
 import os
-from utils import api
 
 app = flask.Flask("__main__")
-app.register_blueprint(api.bp)
 
 @app.route("/")
 def index():

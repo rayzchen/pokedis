@@ -4,3 +4,5 @@ stop
 restart
 db.json
 .breakpoints
+venv/
+api/
