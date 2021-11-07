@@ -1,4 +1,4 @@
-from keep_alive import app
+from keep_alive import keep_alive
 import sys
 import threading
 import importlib
@@ -12,7 +12,7 @@ def reset_modules():
         sys.modules.pop(mod)
 
 def main():
-    t = threading.Thread(target=lambda: app.run(threading=True, port=5000))
+    t = threading.Thread(target=keep_alive)
     t.daemon = True
     t.start()
 
