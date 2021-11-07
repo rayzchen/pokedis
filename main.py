@@ -11,13 +11,14 @@ def reset_modules():
     for mod in pending:
         sys.modules.pop(mod)
 
-t = threading.Thread(target=keep_alive)
-t.daemon = True
-t.start()
+if __name__ == "__main__":
+    t = threading.Thread(target=keep_alive)
+    t.daemon = True
+    t.start()
 
-while True:
-    reset_modules()
-    bot = importlib.import_module("bot")
-    cont = bot.run()
-    if not cont:
-        break
+    while True:
+        reset_modules()
+        bot = importlib.import_module("bot")
+        cont = bot.run()
+        if not cont:
+            break
