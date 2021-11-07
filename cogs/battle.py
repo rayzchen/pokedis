@@ -5,7 +5,6 @@ from discord_slash.utils.manage_components import (
     create_actionrow, create_button)
 from discord_slash.model import ButtonStyle
 from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait, EndCommand
-from uuid import uuid4
 import asyncio
 import inspect
 import random
@@ -102,7 +101,7 @@ class Battle(commands.Cog):
         #     elif poke2["species"] != uuid[1]:
         #         uuid[1] = poke2["species"]
         #         uuid[2] = uuid4()
-            
+        
         #     return f"https://pokedis-api.herokuapp.com/image?a={poke1['species']}&b={poke2['species']}&uuid={uuid[2]}"
 
         def get_image_link():
@@ -139,10 +138,10 @@ class Battle(commands.Cog):
             if data.all_move_data[str(selected)]["acc"] != 0:
                 acc_threshold = random.randint(0, 100) * data.stat_modifiers2[atkpoke["stat_change"][5]] * data.stat_modifiers2[-defpoke["stat_change"][6]]
                 if acc_threshold > data.all_move_data[str(selected)]["acc"]:
-                    await send_battle_embed(cpt=caption)
+                    await send_battle_embed([], cpt=caption)
                     await asyncio.sleep(2)
                     caption = f"{atkname} missed!"
-                    await send_battle_embed(cpt=caption)
+                    await send_battle_embed([], cpt=caption)
                     await asyncio.sleep(2)
                     return
             
@@ -159,7 +158,7 @@ class Battle(commands.Cog):
                     caption += "\n" + effectiveness[effective]
                 if defpoke["hp"] <= 0:
                     defpoke["hp"] = 0
-                await send_battle_embed(cpt=caption)
+                await send_battle_embed([], cpt=caption)
                 await asyncio.sleep(2)
                 if defpoke["hp"] == 0:
                     return
@@ -258,7 +257,7 @@ class Battle(commands.Cog):
                     poke2["hp"] -= min(1, poke2["hp"] // 2)
                     new_caption = ""
                 
-                await send_battle_embed(cpt=caption)
+                await send_battle_embed([], cpt=caption)
                 await asyncio.sleep(2)
                 if new_caption:
                     await send_battle_embed(cpt=new_caption)
@@ -327,6 +326,8 @@ class Battle(commands.Cog):
             if outcome == 2:
                 # Switch out
                 caption = f"{name1} fainted!"
+                if poke1 in participated:
+                    participated.remove(poke1)
                 await send_battle_embed()
                 await asyncio.sleep(2)
                 if all(poke["hp"] == 0 for poke in database.db["users"][ctx.author.id]["pokemon"]):
@@ -498,49 +499,51 @@ class Battle(commands.Cog):
             await send_battle_embed()
             await asyncio.sleep(2)
 
+            print(participated)
+
             # Earn XP
             gain = data.calc_exp_gain(ctx.author.id, poke1, poke2, True) // len(participated)
             for poke in participated:
                 # Loop through each pokemon
-                poke1["exp"] += gain
-                caption = f"{name1} earned **{gain} EXP**!"
+                poke["exp"] += gain
+                caption = f"__{ctx.author.name}'s__ **{data.pokename(poke['species'])}** earned **{gain} EXP**!"
                 await send_battle_embed()
                 await asyncio.sleep(2)
 
                 # Increase EV
-                lvl = data.get_level(poke1["exp"], data.all_pokemon_data[str(poke1["species"])]["growth"])
+                lvl = data.get_level(poke["exp"], data.all_pokemon_data[str(poke["species"])]["growth"])
                 for i in range(5):
-                    poke1["ev"][i] += data.all_pokemon_data[str(poke2["species"])]["base"][i]
+                    poke["ev"][i] += data.all_pokemon_data[str(poke2["species"])]["base"][i]
 
                 # Level up
-                if lvl != poke1["level"]:
-                    caption = f"{name1} levelled up! {poke1['level']} -> {lvl}\n"
-                    poke1["level"] = lvl
-                    data.calc_stats(poke1)
-                    caption += f"ATK -> {poke1['stats']['atk']} DEF -> {poke1['stats']['def']}\nSPEC -> {poke1['stats']['spec']} SPD -> {poke1['stats']['spd']}"
+                if lvl != poke["level"]:
+                    caption = f"{name1} levelled up! {poke['level']} -> {lvl}\n"
+                    poke["level"] = lvl
+                    data.calc_stats(poke)
+                    caption += f"ATK -> {poke['stats']['atk']} DEF -> {poke['stats']['def']}\nSPEC -> {poke['stats']['spec']} SPD -> {poke['stats']['spd']}"
                     await send_battle_embed()
                     await asyncio.sleep(4)
 
                     # Check new moves
-                    if str(lvl) in data.all_pokemon_data[str(poke1["species"])]["learnset"]:
-                        move = data.all_pokemon_data[str(poke1["species"])]["learnset"][str(lvl)]
+                    if str(lvl) in data.all_pokemon_data[str(poke["species"])]["learnset"]:
+                        move = data.all_pokemon_data[str(poke["species"])]["learnset"][str(lvl)]
                         movedata = data.all_move_data[str(move)]
-                        if 0 not in poke1["moves"]:
+                        if 0 not in poke["moves"]:
                             # Forget move
                             caption = f"{name1} is trying to learn **{movedata['name']}**, but it already knows 4 moves!\nWhich move would you like it to forget?"
-                            components = [create_actionrow(create_button(ButtonStyle.green, f"{i} - " + data.all_move_data[str(move)]["name"])) for i, move in enumerate(poke1["moves"])]
+                            components = [create_actionrow(create_button(ButtonStyle.green, f"{i} - " + data.all_move_data[str(move)]["name"])) for i, move in enumerate(poke["moves"])]
                             await send_battle_embed(components)
                             button_ctx = await custom_wait(self.bot, msg, components)
                             forget = int(button_ctx.component["label"][0]) - 1
-                            poke1["moves"][forget] = move
-                            poke1["pp"][forget] = data.all_move_data[str(move)]["pp"]
+                            poke["moves"][forget] = move
+                            poke["pp"][forget] = data.all_move_data[str(move)]["pp"]
                             caption = f"{name1} forgot **{button_ctx.component['label'][4:]}** and learnt **{movedata['name']}**!"
                             await send_battle_embed2()
                         else:
                             # Add move
-                            idx = poke1["moves"].index(0)
-                            poke1["moves"][idx] = move
-                            poke1["pp"][idx] = data.all_move_data[str(move)]["pp"]
+                            idx = poke["moves"].index(0)
+                            poke["moves"][idx] = move
+                            poke["pp"][idx] = data.all_move_data[str(move)]["pp"]
                             caption = f"{name1} learnt **{movedata['name']}**!"
                             await send_battle_embed()
                         await asyncio.sleep(2)
