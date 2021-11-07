@@ -136,12 +136,14 @@ class Battle(commands.Cog):
             # Accuracy check
             # 0 accuracy means bypass accuracy checks
             if data.all_move_data[str(selected)]["acc"] != 0:
-                acc_threshold = random.randint(0, 100) * data.stat_modifiers2[atkpoke["stat_change"][5]] * data.stat_modifiers2[-defpoke["stat_change"][6]]
+                modifiers = data.stat_modifiers2[atkpoke["stat_change"][5]] * data.stat_modifiers2[-defpoke["stat_change"][6]]
+                print(modifiers)
+                acc_threshold = random.randint(0, 100) * modifiers
                 if acc_threshold > data.all_move_data[str(selected)]["acc"]:
                     await send_battle_embed([], cpt=caption)
                     await asyncio.sleep(2)
                     caption = f"{atkname} missed!"
-                    await send_battle_embed([], cpt=caption)
+                    await send_battle_embed(cpt=caption)
                     await asyncio.sleep(2)
                     return
             
@@ -552,6 +554,12 @@ class Battle(commands.Cog):
             caption = f"**{ctx.author.name}** earned **$500**!"
             await send_battle_embed()
             await asyncio.sleep(2)
+
+            await send_embed(
+                ctx,
+                "Victory <:pikahappy:906876093372448798>",
+                f"Congratulations on defeating {name2}!\n" + \
+                f"If you need to, heal up with `/restore`.")
 
 def setup(bot):
     bot.add_cog(Battle(bot))

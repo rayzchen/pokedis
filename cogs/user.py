@@ -4,12 +4,10 @@ from discord_slash.utils.manage_components import (
     create_actionrow, create_button,create_select, create_select_option)
 from discord_slash.model import ButtonStyle
 from utils import send_embed, create_embed, database, check_start, data, make_hp, custom_wait
-from PIL import Image
-from uuid import uuid4
 import asyncio
-import discord
 import math
-import io
+
+main_server = 894254591858851871
 
 start_text = [
     ["Hello there! Welcome to the", "world of POKéMON!"],
@@ -32,7 +30,7 @@ class User(commands.Cog):
     
     @cog_ext.cog_slash(
         name="start", description="Start your Pokémon journey!",
-        guild_ids=[894254591858851871])
+        guild_ids=[main_server])
     async def start(self, ctx: SlashContext):
         if ctx.author.id in database.db["users"]:
             await send_embed(ctx, "Error", "You have already started PokéDis!", author=ctx.author)
@@ -78,7 +76,7 @@ class User(commands.Cog):
     
     @cog_ext.cog_slash(
         name="use", description="Use an item in your inventory",
-        guild_ids=[894254591858851871])
+        guild_ids=[main_server])
     @check_start
     async def use(self, ctx: SlashContext, item):
         name = " ".join(map(str.capitalize, item.rstrip().lstrip().lower().split(" ")))
@@ -104,7 +102,7 @@ class User(commands.Cog):
         await send_embed(ctx, "Item", f"Used '__{name}__'", author=ctx.author)
     
     @cog_ext.cog_slash(
-        name="pc", description="Store and withdraw items from Bill's PC", guild_ids=[894254591858851871])
+        name="pc", description="Store and withdraw items from Bill's PC", guild_ids=[main_server])
     @check_start
     async def pc(self, ctx: SlashContext):
         page = 1
@@ -243,7 +241,7 @@ class User(commands.Cog):
 
     @cog_ext.cog_slash(
         name="pokemon", description="View your Pokémon",
-        guild_ids=[894254591858851871])
+        guild_ids=[main_server])
     @check_start
     async def pokemon(self, ctx: SlashContext):
         page = 0
@@ -279,7 +277,7 @@ class User(commands.Cog):
     
     @cog_ext.cog_slash(
         name="restore", description="Visit the Pokémon Center",
-        guild_ids=[894254591858851871])
+        guild_ids=[main_server])
     @check_start
     async def restore(self, ctx: SlashContext):
         for poke in database.db["users"][ctx.author.id]["pokemon"]:

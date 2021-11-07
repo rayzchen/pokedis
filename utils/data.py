@@ -115,7 +115,6 @@ def get_damage(poke1, poke2, move):
         stat2 = stat2.copy()
     for i, stat in enumerate(stat2):
         stat2[stat] *= stat_modifiers1[poke2["stat_change"][i]]
-    print(stat1, stat2)
 
     a = (2 * poke1["level"] / 5 + 2) * movedata["power"]
     if movedata["special"]:
