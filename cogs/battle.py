@@ -103,10 +103,10 @@ class Battle(commands.Cog):
         #         uuid[1] = poke2["species"]
         #         uuid[2] = uuid4()
             
-        #     return f"https://pokedis.rayzchen.repl.co/image?a={poke1['species']}&b={poke2['species']}&uuid={uuid[2]}"
+        #     return f"https://pokedis-api.herokuapp.com/image?a={poke1['species']}&b={poke2['species']}&uuid={uuid[2]}"
 
         def get_image_link():
-            return f"https://pokedis.rayzchen.repl.co/image?a={poke1['species']}&b={poke2['species']}"
+            return f"https://pokedis-api.herokuapp.com/image?a={poke1['species']}&b={poke2['species']}"
         
         async def send_battle_embed(buttons=None, cpt=None):
             if cpt is not None:
