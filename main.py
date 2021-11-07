@@ -6,7 +6,7 @@ import importlib
 def reset_modules():
     pending = []
     for module in sys.modules:
-        if module.startswith("utils.") or module.startswith("cogs") or module == "bot":
+        if module.startswith("utils") or module.startswith("cogs") or module == "bot":
             pending.append(module)
     for mod in pending:
         sys.modules.pop(mod)

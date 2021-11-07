@@ -68,7 +68,7 @@ class Battle(commands.Cog):
             raise EndCommand
         participated = [poke1]
 
-        poke2 = data.gen_pokemon(random.choice([16, 16]), poke1["level"] + random.randint(-2, 2))
+        poke2 = data.gen_pokemon(random.choice([19, 19]), poke1["level"] + random.randint(-5, -2))
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
 
@@ -108,10 +108,7 @@ class Battle(commands.Cog):
             return f"https://pokedis-api.herokuapp.com/image?a={poke1['species']}&b={poke2['species']}"
         
         async def send_battle_embed(buttons=None, cpt=None):
-            if cpt is not None:
-                embed = create_embed("Battle", get_text(cpt), author=ctx.author)
-            else:
-                embed = create_embed("Battle", get_text(caption), author=ctx.author)
+            embed = create_embed("Battle", get_text(cpt or caption), author=ctx.author)
             embed.set_image(url=get_image_link())
             await msg.edit(embed=embed, components=buttons)
         
@@ -136,8 +133,7 @@ class Battle(commands.Cog):
             # Accuracy check
             # 0 accuracy means bypass accuracy checks
             if data.all_move_data[str(selected)]["acc"] != 0:
-                modifiers = data.stat_modifiers2[atkpoke["stat_change"][5]] * data.stat_modifiers2[-defpoke["stat_change"][6]]
-                print(modifiers)
+                modifiers = data.stat_modifiers[atkpoke["stat_change"][5]] * data.stat_modifiers[-defpoke["stat_change"][6]]
                 acc_threshold = random.randint(0, 100) * modifiers
                 if acc_threshold > data.all_move_data[str(selected)]["acc"]:
                     await send_battle_embed([], cpt=caption)
@@ -250,10 +246,11 @@ class Battle(commands.Cog):
                     if "seed" in registers[num]:
                         new_caption = "Nothing happened!"
                     else:
-                        registers[num]["seed"] = 1
                         new_caption = f"A seed was planted in {defname}!"
                         if "grass" in defpoke["types"]:
                             new_caption += "\nIt doesn't affect it!"
+                        else:
+                            registers[num]["seed"] = 1
                 elif selected == 162:
                     # Super fang
                     poke2["hp"] -= min(1, poke2["hp"] // 2)
@@ -266,6 +263,7 @@ class Battle(commands.Cog):
                     await asyncio.sleep(2)
                 
                 if end:
+                    # Whirlwind
                     raise EndCommand
         
         def check_win():
@@ -286,9 +284,7 @@ class Battle(commands.Cog):
                 caption = f"{name} suffered __Burn__ damage!"
                 await send_battle_embed(cpt=caption)
                 await asyncio.sleep(2)
-                if poke["hp"] == 0:
-                    return True
-            elif 3 in poke["status"]:
+            if 3 in poke["status"]:
                 dmg = poke["stats"]["hp"] // 8
                 poke["hp"] -= dmg
                 if poke["hp"] < 0:
@@ -296,9 +292,20 @@ class Battle(commands.Cog):
                 caption = f"{name} suffered __Poison__ damage!"
                 await send_battle_embed(cpt=caption)
                 await asyncio.sleep(2)
-                if poke["hp"] == 0:
-                    return True
-            return False
+            num = int(poke is poke2)
+            print(registers[num])
+            if "seed" in registers[num]:
+                # Leech seed
+                other = poke1 if num else poke2
+                othername = name1 if num else name2
+                dmg = min(math.floor(poke["hp"] / 16), 1)
+                poke["hp"] -= dmg
+                other["hp"] += dmg
+                other["hp"] = min(other["hp"], other["stats"]["hp"])
+                caption = f"{name1} absorbed HP\nfrom {othername}!"
+                await send_battle_embed(cpt=caption)
+                await asyncio.sleep(2)
+            return poke["hp"] == 0
         
         async def apply_effects():
             ret = await apply_effect(poke1, name1)
@@ -500,8 +507,6 @@ class Battle(commands.Cog):
             caption = f"{name2} fainted!"
             await send_battle_embed()
             await asyncio.sleep(2)
-
-            print(participated)
 
             # Earn XP
             gain = data.calc_exp_gain(ctx.author.id, poke1, poke2, True) // len(participated)

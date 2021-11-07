@@ -20,8 +20,7 @@ with open("utils/datafiles/effective.json") as f:
     effective_table = json.loads(f.read())
 
 stat_names = ["HP", "Attack", "Defense", "Special", "Speed", "Accuracy", "Evasion"]
-stat_modifiers1 = [2/2, 3/2, 4/2, 5/2, 6/2, 7/2, 8/2, 2/8, 2/7, 2/6, 2/5, 2/4, 2/3]
-stat_modifiers2 = [3/3, 4/3, 5/3, 6/3, 7/3, 8/3, 9/3, 3/9, 3/8, 3/7, 3/6, 3/5, 3/4]
+stat_modifiers = [2/2, 3/2, 4/2, 5/2, 6/2, 7/2, 8/2, 2/8, 2/7, 2/6, 2/5, 2/4, 2/3]
 conditions = [
     "__burned__!",
     "__frozen__! It cannot move!",
@@ -106,7 +105,7 @@ def get_damage(poke1, poke2, move):
     else:
         stat1 = stat1.copy()
     for i, stat in enumerate(stat1):
-        stat1[stat] *= stat_modifiers1[poke1["stat_change"][i]]
+        stat1[stat] *= stat_modifiers[poke1["stat_change"][i]]
     
     stat2 = poke2["stats"]
     if isinstance(stat2, LiveDict):
@@ -114,7 +113,7 @@ def get_damage(poke1, poke2, move):
     else:
         stat2 = stat2.copy()
     for i, stat in enumerate(stat2):
-        stat2[stat] *= stat_modifiers1[poke2["stat_change"][i]]
+        stat2[stat] *= stat_modifiers[poke2["stat_change"][i]]
 
     a = (2 * poke1["level"] / 5 + 2) * movedata["power"]
     if movedata["special"]:

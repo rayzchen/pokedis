@@ -64,6 +64,5 @@ class Main(commands.Cog):
         buttons = create_actionrow(create_button(ButtonStyle.URL, "Invite me!", url=invite))
         await ctx.send(embed=embed, components=[buttons])
 
-
 def setup(bot):
     bot.add_cog(Main(bot))
