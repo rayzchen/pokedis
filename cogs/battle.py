@@ -38,13 +38,25 @@ class Battle(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         if message.author.id == self.bot.user.id and len(message.embeds) and message.embeds[0].title == "Battle":
-            userid = int(message.embeds[0].author.icon_url.split("/")[4])
-            user = await self.bot.fetch_user(userid)
-            await send_embed(message.channel, "Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user)
             if message.guild.id in database.db["servers"] and message.channel.id in database.db["servers"][message.guild.id]["battling"]:
-                database.db["servers"][message.guild.id]["battling"].remove(message.channel.id)
                 print("Removed")
+                userid = int(message.embeds[0].author.icon_url.split("/")[4])
+                user = await self.bot.fetch_user(userid)
+                await send_embed(message.channel, "Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user)
+                database.db["servers"][message.guild.id]["battling"].remove(message.channel.id)
     
+    @commands.Cog.listener()
+    async def on_bulk_message_delete(self, messages):
+        for message in messages:
+            if message.author.id == self.bot.user.id and len(message.embeds) and message.embeds[0].title == "Battle":
+                if message.guild.id in database.db["servers"] and message.channel.id in database.db["servers"][message.guild.id]["battling"]:
+                    print("Removed")
+                    userid = int(message.embeds[0].author.icon_url.split("/")[4])
+                    user = await self.bot.fetch_user(userid)
+                    await send_embed(message.channel, "Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user)
+                    database.db["servers"][message.guild.id]["battling"].remove(message.channel.id)
+                    return
+
     @cog_ext.cog_slash(
         name="battle", description="Test battle",
         guild_ids=[894254591858851871])
