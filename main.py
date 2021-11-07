@@ -11,7 +11,7 @@ def reset_modules():
     for mod in pending:
         sys.modules.pop(mod)
 
-if __name__ == "__main__":
+def main():
     t = threading.Thread(target=lambda: app.run(threading=True, port=5000))
     t.daemon = True
     t.start()
@@ -22,3 +22,6 @@ if __name__ == "__main__":
         cont = bot.run()
         if not cont:
             break
+
+if __name__ == "__main__":
+    main()
