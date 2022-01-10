@@ -159,7 +159,11 @@ class Battle(commands.Cog):
             if data.all_move_data[str(selected)]["effect"] != 1:
                 # Physical damage
                 dmg = data.get_damage(atkpoke, defpoke, selected)
-                crit = data.is_crit(atkpoke, registers[num].get("crit", 1))
+                if "critical" in data.all_move_data[str(selected)]:
+                    bonus = 8
+                else:
+                    bonus = 1
+                crit = data.is_crit(atkpoke, registers[num].get("crit", bonus))
                 if crit == 2:
                     caption += " **CRITICAL HIT!**"
                 effective = data.get_effective(selected, defpoke)
@@ -253,6 +257,23 @@ class Battle(commands.Cog):
                     # Whirlwind
                     new_caption = f"{atkname} blew {defname} away!"
                     end = True
+                elif selected == 99:
+                    # Rage
+                    caption += f"\n{atkname}'s rage is building up!"
+                    if atkpoke["stat_change"][1] < 6:
+                        atkpoke["stat_change"][1] += 1
+
+                    # Same code as above
+                    dmg = data.get_damage(atkpoke, defpoke, selected)
+                    crit = data.is_crit(atkpoke, registers[num].get("crit", 1))
+                    if crit == 2:
+                        caption += "\n**CRITICAL HIT!**"
+                    effective = data.get_effective(selected, defpoke)
+                    defpoke["hp"] -= int(dmg * crit * effective * (random.random() * 0.15 + 0.85))
+                    if effective != 1:
+                        caption += "\n" + effectiveness[effective]
+                    if defpoke["hp"] <= 0:
+                        defpoke["hp"] = 0
                 elif selected == 73:
                     # Leech seed
                     if "seed" in registers[num]:
@@ -263,9 +284,12 @@ class Battle(commands.Cog):
                             new_caption += "\nIt doesn't affect it!"
                         else:
                             registers[num]["seed"] = 1
+                elif selected == 83:
+                    # Fire Spin
+                    caption += "\n*Not implemented*"
                 elif selected == 162:
                     # Super fang
-                    poke2["hp"] -= min(1, poke2["hp"] // 2)
+                    defpoke["hp"] -= min(1, defpoke["hp"] // 2)
                     new_caption = ""
                 
                 await send_battle_embed([], cpt=caption)
