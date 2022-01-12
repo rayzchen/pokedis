@@ -80,7 +80,7 @@ class Battle(commands.Cog):
             raise EndCommand
         participated = [poke1]
 
-        poke2 = data.gen_pokemon(random.choice([19, 19]), poke1["level"] + random.randint(-5, -2))
+        poke2 = data.gen_pokemon(random.choice([16, 19]), poke1["level"] + random.randint(-2, 2))
         name1 = f"__{ctx.author.name}'s__ **{data.pokename(poke1['species'])}**"
         name2 = f"__Wild__ **{data.pokename(poke2['species'])}**"
 
