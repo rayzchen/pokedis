@@ -12,7 +12,7 @@ def hook():
     @flask.current_app.after_response
     def worker():
         os.system("git fetch")
-        os.system("git reset --hard origin/master")
+        os.system("git reset --hard origin/main")
         open("restart", "w+").close()
     
     return flask.Response(status=200)
