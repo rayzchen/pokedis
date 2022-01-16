@@ -3,25 +3,25 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
     create_actionrow, create_button,create_select, create_select_option)
 from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, database, check_start, data, make_hp, custom_wait
+from utils import send_embed, create_embed, database, check_start, data, make_hp, custom_wait, EndCommand
 import asyncio
 import math
 
 main_server = 894254591858851871
 
 start_text = [
-    ["Hello there! Welcome to the", "world of POKéMON!"],
-    ["My name is OAK! People call me", "the POKéMON PROF!"],
-    ["This world is inhabited by", "creatures called POKéMON!"],
-    ["For some people, POKéMON are", "pets. Others use them for fights."],
+    ["Hello there! Welcome to the", "world of Pokémon!"],
+    ["My name is OAK! People call me", "the Pokémon PROF!"],
+    ["This world is inhabited by", "creatures called Pokémon!"],
+    ["For some people, Pokémon are", "pets. Others use them for fights."],
     ["Myself..."],
-    ["I study POKéMON as a profession."],
+    ["I study Pokémon as a profession."],
 ]
 delim = u"\n\u2800\u2800\u2800\u2800 "
 
 start_text2 = [
-    ["Your very own POKéMON journey", "is about to begin!"],
-    ["A world of dreams and adventures", "with POKéMON awaits! Let's go!"],
+    ["Your very own Pokémon journey", "is about to begin!"],
+    ["A world of dreams and adventures", "with Pokémon awaits! Let's go!"],
 ]
 
 class User(commands.Cog):
@@ -32,47 +32,67 @@ class User(commands.Cog):
         name="start", description="Start your Pokémon journey!",
         guild_ids=[main_server])
     async def start(self, ctx: SlashContext):
-        if ctx.author.id in database.db["users"]:
-            await send_embed(ctx, "Error", "You have already started PokéDis!", author=ctx.author)
+        try:
+            if ctx.author.id in database.db["users"]:
+                await send_embed(ctx, "Error", "You have already started PokéDis!", author=ctx.author)
+                return
+            buttons = create_actionrow(
+                create_button(style=ButtonStyle.green, label="Talk"))
+            msg = await send_embed(
+                ctx, "Start", "Talk to Professor Oak.", author=ctx.author, components=[buttons])
+            button_ctx = await custom_wait(self.bot, msg, buttons)
+
+            for line in start_text:
+                buttons = create_actionrow(
+                    create_button(style=ButtonStyle.green, label="Continue"))
+                embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
+                await button_ctx.edit_origin(embed=embed, components=[buttons])
+                button_ctx = await custom_wait(self.bot, msg, buttons)
+            
+            buttons = create_actionrow(
+                create_button(style=ButtonStyle.green, label="Continue"))
+            embed = create_embed("Professor Oak", "OAK - **" + ctx.author.name.upper() + "**!", author=ctx.author)
+            await button_ctx.edit_origin(embed=embed, components=[buttons])
+            button_ctx = await custom_wait(self.bot, msg, buttons)
+
+            for line in start_text2:
+                buttons = create_actionrow(
+                    create_button(style=ButtonStyle.green, label="Continue"))
+                embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
+                await button_ctx.edit_origin(embed=embed, components=[buttons])
+                button_ctx = await custom_wait(self.bot, msg, buttons)
+            
+            embed = create_embed("Start", "Use /help for help with commands.", author=ctx.author)
+            await button_ctx.edit_origin(embed=embed, components=[])
+        except EndCommand:
+            await ctx.reply("Player creation cancelled.")
             return
-        buttons = create_actionrow(
-            create_button(style=ButtonStyle.green, label="Talk"))
-        msg = await send_embed(
-            ctx, "Start", "Talk to Professor Oak.", author=ctx.author, components=[buttons])
+        except:
+            raise
+        
+        starters = ["Bulbasaur", "Charmander", "Squirtle"]
+
+        buttons = create_actionrow(*[
+            create_button(style=ButtonStyle.green, label=p) for p in starters])
+        embed = create_embed("Starter Pokémon",
+            "Which Pokémon would you like to select?\n\n1. __Bulbasaur__\nType: **Grass**\n\n2. __Charmnder__\nType: **Fire**\n\n3. __Squirtle__\n\nType: **Water**")
+        msg = await ctx.reply(embed=embed, components=[buttons])
         button_ctx = await custom_wait(self.bot, msg, buttons)
 
-        for line in start_text:
-            buttons = create_actionrow(
-                create_button(style=ButtonStyle.green, label="Continue"))
-            embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
-            await button_ctx.edit_origin(embed=embed, components=[buttons])
-            button_ctx = await custom_wait(self.bot, msg, buttons)
-        
-        buttons = create_actionrow(
-            create_button(style=ButtonStyle.green, label="Continue"))
-        embed = create_embed("Professor Oak", "OAK - **" + ctx.author.name.upper() + "**!", author=ctx.author)
-        await button_ctx.edit_origin(embed=embed, components=[buttons])
-        button_ctx = await custom_wait(self.bot, msg, buttons)
-
-        for line in start_text2:
-            buttons = create_actionrow(
-                create_button(style=ButtonStyle.green, label="Continue"))
-            embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
-            await button_ctx.edit_origin(embed=embed, components=[buttons])
-            button_ctx = await custom_wait(self.bot, msg, buttons)
-        
-        embed = create_embed("Start", "Use /help for help with commands.", author=ctx.author)
-        await button_ctx.edit_origin(embed=embed, components=[])
-        
-        charmander = data.gen_pokemon(4, 5)
+        pokemon = data.gen_pokemon(starters.index(button_ctx.component["label"]) * 3 + 1, 5)
         user = {
             "inventory": [],
             "pc": [{"name": "Potion", "count": 1}],
             "rival": "Gary",
-            "pokemon": [charmander],
+            "pokemon": [pokemon],
             "badges": [],
         }
         database.db["users"][ctx.author.id] = user
+
+        buttons = create_actionrow(*[
+            create_button(style=ButtonStyle.green, label=p) for p in starters])
+        embed = create_embed("Starter Pokémon", f"You have chosen __{button_ctx.component['label']}__ as your starter!")
+        button_ctx.edit_origin(embed=embed, components=[buttons])
     
     @cog_ext.cog_slash(
         name="use", description="Use an item in your inventory",
@@ -100,7 +120,7 @@ class User(commands.Cog):
         database.db["users"][ctx.author.id]["inventory"] = inv
 
         await send_embed(ctx, "Item", f"Used '__{name}__'", author=ctx.author)
-    
+
     @cog_ext.cog_slash(
         name="pc", description="Store and withdraw items from Bill's PC", guild_ids=[main_server])
     @check_start
