@@ -3,10 +3,8 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
     create_actionrow, create_button)
 from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, database, format_traceback
+from utils import send_embed, create_embed, database, format_traceback, main_server
 import os
-
-main_server = 894254591858851871
 
 class Main(commands.Cog):
     def __init__(self, bot):
@@ -39,7 +37,7 @@ class Main(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_guild=True)
     async def restart(self, ctx):
-        if ctx.guild.id != main_server:
+        if ctx.guild.id != main_server[0]:
             return
         open("restart", "w+").close()
         await send_embed(ctx, "", "Restarting")
@@ -47,14 +45,14 @@ class Main(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_guild=True)
     async def stop(self, ctx):
-        if ctx.guild.id != main_server:
+        if ctx.guild.id != main_server[0]:
             return
         open("stop", "w+").close()
         await send_embed(ctx, "", "Stopping")
     
     @cog_ext.cog_slash(
         name="reldb", description="Reload the database",
-        guild_ids=[main_server])
+        guild_ids=main_server)
     async def reldb(self, ctx: SlashContext):
         message = await send_embed(ctx, "", "Reloading database...")
         database.db = database.Database("db.json")
@@ -62,7 +60,7 @@ class Main(commands.Cog):
     
     @cog_ext.cog_slash(
         name="invite", description="Invite this bot to your server",
-        guild_ids=[main_server])
+        guild_ids=main_server)
     async def invite(self, ctx: SlashContext):
         invite = "https://discord.com/api/oauth2/authorize?client_id=894239120577159178&permissions=2147863616&scope=bot%20applications.commands"
         embed = create_embed("Invite", "Help expand the Pokédis community by inviting\nthis bot to your server!")

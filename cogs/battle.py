@@ -59,7 +59,7 @@ class Battle(commands.Cog):
 
     @cog_ext.cog_slash(
         name="battle", description="Test battle",
-        guild_ids=[894254591858851871])
+        guild_ids=main_server)
     @remove_channel_from_db
     @check_start
     async def battle(self, ctx: SlashContext):

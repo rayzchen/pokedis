@@ -3,8 +3,14 @@ import discord
 import inspect
 import asyncio
 import traceback
+import os
 from discord_slash.utils.manage_components import wait_for_component
 # from discord_slash.model import SlashMessage
+
+main_server = [894254591858851871]
+
+if "NO_MAIN_SERVER" in os.environ:
+    main_server = None
 
 def get_prefix(bot, ctx):
     return "p!"
