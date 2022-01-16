@@ -87,10 +87,28 @@ class User(commands.Cog):
         database.db["users"][ctx.author.id] = user
 
         buttons = create_actionrow(*[
-            create_button(style=ButtonStyle.green, label=p) for p in starters])
+            create_button(style=ButtonStyle.green, label=p, disabled=True) for p in starters])
         embed = create_embed("Starter Pokémon", f"You have chosen __{button_ctx.component['label']}__ as your starter!")
         await button_ctx.edit_origin(embed=embed, components=[buttons])
     
+    @cog_ext.cog_slash(
+        name="delete", description="Delete your account",
+        guild_ids=[main_server])
+    @check_start
+    async def delete(self, ctx: SlashContext):
+        embed = create_embed("Delete", "Are you sure you want to delete your account?\nThis process cannot be undone.")
+        buttons = create_actionrow(
+            create_button(style=ButtonStyle.green, label="No"),
+            create_button(style=ButtonStyle.green, label="Yes"))
+        msg = await ctx.send(embed, components=[buttons])
+        button_ctx = await custom_wait(self.bot, msg, buttons)
+        if button_ctx.component["label"] == "Yes":
+            database.db["users"].pop(ctx.author.id)
+            embed = create_embed("Delete", "Deleted account. You can restart with `/start`.")
+        else:
+            embed = create_embed("Delete", "Cancelled deleting account.")
+        await button_ctx.edit_origin(embed=embed, components=[])
+
     @cog_ext.cog_slash(
         name="use", description="Use an item in your inventory",
         guild_ids=[main_server])
