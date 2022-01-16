@@ -99,7 +99,7 @@ class User(commands.Cog):
         buttons = create_actionrow(
             create_button(style=ButtonStyle.green, label="No"),
             create_button(style=ButtonStyle.green, label="Yes"))
-        msg = send_embed(ctx, "Delete", "Are you sure you want to delete your account?\nThis process cannot be undone.", author=ctx.author, components=[buttons])
+        msg = await send_embed(ctx, "Delete", "Are you sure you want to delete your account?\nThis process cannot be undone.", author=ctx.author, components=[buttons])
         button_ctx = await custom_wait(self.bot, msg, buttons)
         if button_ctx.component["label"] == "Yes":
             database.db["users"].pop(ctx.author.id)
