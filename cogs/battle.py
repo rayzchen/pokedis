@@ -360,6 +360,7 @@ class Battle(commands.Cog):
         
         run_count = 0
         has_run_away = False
+        blacked_out = False
         outcome = 0 # 0 for no outcome, 1 for player, 2 for opponent
 
         ## MAIN LOOP
@@ -376,6 +377,7 @@ class Battle(commands.Cog):
                 await asyncio.sleep(2)
                 if all(poke["hp"] == 0 for poke in database.db["users"][ctx.author.id]["pokemon"]):
                     # Black out
+                    blacked_out = True
                     caption = f"**{ctx.author.name}** has no usable pokémon!"
                     await send_battle_embed()
                     await asyncio.sleep(2)
@@ -537,6 +539,11 @@ class Battle(commands.Cog):
         if has_run_away:
             caption = "Got away safely!"
             await send_battle_embed2()
+            await send_embed(
+                ctx,
+                "Escaped",
+                f"You escaped from {name2}!\n" + \
+                f"If you need to, heal up with `/restore`.")
         elif outcome == 1:
             # Player win
             caption = f"{name2} fainted!"
@@ -599,6 +606,18 @@ class Battle(commands.Cog):
                 ctx,
                 "Victory <:pikahappy:906876093372448798>",
                 f"Congratulations on defeating {name2}!\n" + \
+                f"If you need to, heal up with `/restore`.")
+        elif blacked_out:
+            await send_embed(
+                ctx,
+                "Defeat <:pikafaint:932365625492385792>",
+                f"You lost to {name2}!\n" + \
+                f"All your Pokémon's health have been restored.")
+        else:
+            await send_embed(
+                ctx,
+                "Defeat <:pikafaint:932365625492385792>",
+                f"You lost to {name2}!\n" + \
                 f"If you need to, heal up with `/restore`.")
 
 def setup(bot):
