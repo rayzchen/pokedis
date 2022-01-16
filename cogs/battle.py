@@ -4,7 +4,7 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
     create_actionrow, create_button)
 from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait, EndCommand
+from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait, EndCommand, main_server
 import asyncio
 import inspect
 import random
