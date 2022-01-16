@@ -96,11 +96,10 @@ class User(commands.Cog):
         guild_ids=[main_server])
     @check_start
     async def delete(self, ctx: SlashContext):
-        embed = create_embed("Delete", "Are you sure you want to delete your account?\nThis process cannot be undone.")
         buttons = create_actionrow(
             create_button(style=ButtonStyle.green, label="No"),
             create_button(style=ButtonStyle.green, label="Yes"))
-        msg = await ctx.send(embed, components=[buttons])
+        msg = send_embed(ctx, "Delete", "Are you sure you want to delete your account?\nThis process cannot be undone.", author=ctx.author, components=[buttons])
         button_ctx = await custom_wait(self.bot, msg, buttons)
         if button_ctx.component["label"] == "Yes":
             database.db["users"].pop(ctx.author.id)
