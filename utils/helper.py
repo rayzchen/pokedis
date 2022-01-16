@@ -2,6 +2,7 @@ from . import database
 import discord
 import inspect
 import asyncio
+import traceback
 from discord_slash.utils.manage_components import wait_for_component
 # from discord_slash.model import SlashMessage
 
@@ -131,3 +132,8 @@ async def custom_wait(bot, message, components):
         else:
             break
     return button_ctx
+
+def format_traceback(err):
+    _traceback = "".join(traceback.format_tb(err.__traceback__))
+    error = f"```py\n{_traceback}{type(err).__name__}: {err}\n```"
+    return error

@@ -3,7 +3,7 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_components import (
     create_actionrow, create_button)
 from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, database
+from utils import send_embed, create_embed, database, format_traceback
 import os
 
 main_server = 894254591858851871
@@ -20,6 +20,11 @@ class Main(commands.Cog):
         self.restart_checker.start()
         for server in database.db["servers"].values():
             server["battling"] = []
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, err):
+        error = format_traceback(err, False)
+        await ctx.send("There was an error processing the command:" + "\n" + error)
 
     @tasks.loop(seconds=2)
     async def restart_checker(self):
