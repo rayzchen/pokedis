@@ -1,4 +1,4 @@
-from keep_alive import keep_alive
+from server import keep_alive
 import sys
 import threading
 import importlib
