@@ -211,7 +211,6 @@ class Battle(commands.Cog):
                                 await asyncio.sleep(2)
             else:
                 # Status move (or special damage calc)
-                caption += "\nSpecial effect!"
                 spec_move = data.special_move_data[str(selected)]
 
                 # Targets
