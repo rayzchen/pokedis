@@ -1,3 +1,4 @@
+from traceback import print_exc
 from server import keep_alive
 import sys
 import threading
@@ -18,10 +19,14 @@ def main():
 
     while True:
         reset_modules()
-        bot = importlib.import_module("bot")
-        cont = bot.run()
-        if not cont:
-            break
+        try:
+            bot = importlib.import_module("bot")
+            cont = bot.run()
+            if not cont:
+                break
+        except Exception as e:
+            print_exc(e)
+            continue
 
 if __name__ == "__main__":
     main()
