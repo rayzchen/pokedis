@@ -9,7 +9,8 @@ def index():
 
 @app.route("/hook", methods=["POST", "GET"])
 def hook():
-    os.system("git pull")
+    os.system("git fetch")
+    os.system("git reset --hard origin/master")
     open("restart", "w+").close()
     return flask.Response(status=200)
 
