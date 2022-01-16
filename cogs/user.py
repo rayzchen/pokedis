@@ -89,7 +89,7 @@ class User(commands.Cog):
         buttons = create_actionrow(*[
             create_button(style=ButtonStyle.green, label=p) for p in starters])
         embed = create_embed("Starter Pokémon", f"You have chosen __{button_ctx.component['label']}__ as your starter!")
-        button_ctx.edit_origin(embed=embed, components=[buttons])
+        await button_ctx.edit_origin(embed=embed, components=[buttons])
     
     @cog_ext.cog_slash(
         name="use", description="Use an item in your inventory",
