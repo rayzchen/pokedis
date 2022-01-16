@@ -61,9 +61,6 @@ class User(commands.Cog):
                 embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
                 await button_ctx.edit_origin(embed=embed, components=[buttons])
                 button_ctx = await custom_wait(self.bot, msg, buttons)
-            
-            embed = create_embed("Start", "Use /help for help with commands.", author=ctx.author)
-            await button_ctx.edit_origin(embed=embed, components=[])
         except EndCommand:
             await ctx.reply("Player creation cancelled.")
             return
@@ -75,8 +72,8 @@ class User(commands.Cog):
         buttons = create_actionrow(*[
             create_button(style=ButtonStyle.green, label=p) for p in starters])
         embed = create_embed("Starter Pokémon",
-            "Which Pokémon would you like to select?\n\n1. __Bulbasaur__\nType: **Grass**\n\n2. __Charmnder__\nType: **Fire**\n\n3. __Squirtle__\n\nType: **Water**")
-        msg = await ctx.reply(embed=embed, components=[buttons])
+            "Which Pokémon would you like to select?\n\n1. __Bulbasaur__\nType: **Grass**\n\n2. __Charmnder__\nType: **Fire**\n\n3. __Squirtle__\nType: **Water**")
+        await button_ctx.edit_origin(embed=embed, components=[buttons])
         button_ctx = await custom_wait(self.bot, msg, buttons)
 
         pokemon = data.gen_pokemon(starters.index(button_ctx.component["label"]) * 3 + 1, 5)
