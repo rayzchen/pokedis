@@ -1,16 +1,44 @@
 from . import database
+from discord.ui import View, Button, Select
 import discord
 import inspect
-import asyncio
 import traceback
 import os
-from discord_slash.utils.manage_components import wait_for_component
-# from discord_slash.model import SlashMessage
 
 main_server = [894254591858851871]
+moderator_perms = discord.Permissions()
+moderator_perms.manage_guild = True
 
 if "NO_MAIN_SERVER" in os.environ:
     main_server = None
+
+class CustomView(View):
+    def __init__(self, *buttons):
+        super(CustomView, self).__init__(*buttons, timeout=60)
+        self.current = None
+        self.bot = None
+
+    async def interaction_check(self, interaction):
+        userid = int(interaction.message.embeds[0].author.icon_url.split("/")[4])
+        return interaction.user.id == userid
+
+    async def on_check_failure(self, interaction):
+        await interaction.message.reply("This interaction is not for you.", hidden=True)
+
+    async def custom_wait(self, bot):
+        self.bot = bot
+        timed_out = await self.wait()
+        if timed_out:
+            self.disable_all_items()
+            raise EndCommand
+
+class CustomButton(Button):
+    async def callback(self, interaction):
+        self.view.current = self
+
+class CustomSelect(Select):
+    async def callback(self, interaction):
+        self.view.current = self
 
 def get_prefix(bot, ctx):
     return "p!"
@@ -19,12 +47,15 @@ def create_embed(title, description, color=0x00CCFF, footer="", author=None):
     embed = discord.Embed(title=title, description=description, color=color)
     embed.set_footer(text=footer)
     if author is not None:
-        embed.set_author(name=author.name, icon_url=author.avatar_url)
+        embed.set_author(name=author.name, icon_url=author.avatar.url)
     return embed
 
-async def send_embed(ctx, title, description, color=0x00CCFF, footer="", author=None, **kwargs):
-    msg = await ctx.send(embed=create_embed(title, description, color, footer, author), **kwargs)
-    return msg
+async def send_embed(ctx, title, description, color=0x00CCFF, footer="", author=None, respond=True, **kwargs):
+    func = ctx.send_response if respond else ctx.send
+    out = await func(embed=create_embed(title, description, color, footer, author), **kwargs)
+    # out could be Message if respond else Interaction
+    # If respond is True use `Interaction.edit_original_message` to edit
+    return out
 
 class EndCommand(Exception):
     pass
@@ -77,7 +108,7 @@ def make_hp(amount):
         color = 1
     else:
         color = 2
-    
+
     bar = [0 for _ in range(10)]
     end = int(amount * 10)
     for i in range(end):
@@ -86,7 +117,7 @@ def make_hp(amount):
         bar[end] = 1
     if bar[0] == 0:
         bar[0] = 1
-    
+
     if bar[0] == 0:
         text = emojis[-3]
     elif bar[0] == 1:
@@ -107,37 +138,6 @@ def make_hp(amount):
     else:
         text += emojis[color * 6 + 2]
     return text
-
-async def custom_wait(bot, message, components):
-    userid = int(message.embeds[0].author.icon_url.split("/")[4])
-    user = await bot.fetch_user(userid)
-    while True:
-        try:
-            button_ctx = await wait_for_component(bot, components=components, timeout=60)
-        except asyncio.TimeoutError:
-            if message.embeds[0].title == "Battle":
-                try:
-                    await message.reply(embed=create_embed("Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user))
-                    if message.guild.id in database.db["servers"]:
-                        if message.channel.id in database.db["servers"][message.guild.id]["battling"]:
-                            database.db["servers"][message.guild.id]["battling"].remove(message.channel.id)
-                except:
-                    raise EndCommand
-            if isinstance(components, dict):
-                for component in components["components"]:
-                    component["disabled"] = True
-                await message.edit(components=[components])
-            else:
-                for row in components:
-                    for component in row["components"]:
-                        component["disabled"] = True
-                await message.edit(components=components)
-            raise EndCommand
-        if button_ctx.author_id != userid:
-            await button_ctx.reply("This interaction is not for you.", hidden=True)
-        else:
-            break
-    return button_ctx
 
 def format_traceback(err):
     _traceback = "".join(traceback.format_tb(err.__traceback__))

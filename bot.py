@@ -1,7 +1,6 @@
 import os
 import sys
 import glob
-import utils
 import asyncio
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -9,16 +8,16 @@ if sys.platform.startswith("win"):
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
-from discord.ext import commands
-from discord_slash import SlashCommand
+from discord import AutoShardedBot
 
 if os.path.isfile(".token"):
     print("Loading token")
     with open(".token") as f:
         os.environ["TOKEN"] = f.read().rstrip()
 
-bot = commands.AutoShardedBot(command_prefix=utils.get_prefix, help_command=None, loop=loop)
-slash = SlashCommand(bot, sync_commands=True)
+bot = AutoShardedBot(debug_guilds=[894254591858851871],
+                     auto_sync_commands=True,
+                     loop=loop)
 
 for file in glob.glob("cogs/**/*.py", recursive=True):
     bot.load_extension(file.replace(".py", "").replace(os.path.sep, "."))

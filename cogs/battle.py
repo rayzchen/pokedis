@@ -1,15 +1,20 @@
 # https://lucid.app/lucidchart/6a31915f-042e-4dec-be20-18997ad19643/edit?beaconFlowId=81B1E0515BD675DB&invitationId=inv_997cb4a9-99c5-469c-b13a-b3065593fccd&page=0_0#
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_components import (
-    create_actionrow, create_button)
-from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, check_start, database, data, make_hp, custom_wait, EndCommand, main_server
+from discord import ButtonStyle, Cog, slash_command, ApplicationContext
+from utils import CustomView, CustomButton, send_embed, create_embed, check_start, database, data, make_hp, EndCommand
 import asyncio
 import inspect
 import random
 import math
 import time
+
+class BattleView(CustomView):
+    async def on_timeout(self):
+        userid = int(self.message.embeds[0].author.icon_url.split("/")[4])
+        user = await self.bot.fetch_user(userid)
+        await self.message.reply(embed=create_embed("Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user))
+        if self.message.guild.id in database.db["servers"]:
+            if self.message.channel.id in database.db["servers"][self.message.guild.id]["battling"]:
+                database.db["servers"][self.message.guild.id]["battling"].remove(self.message.channel.id)
 
 effectiveness = {
     0: "It was not effective at all!",
@@ -31,11 +36,11 @@ def remove_channel_from_db(func):
     inner.__signature__ = inspect.signature(func)
     return inner
 
-class Battle(commands.Cog):
+class Battle(Cog):
     def __init__(self, bot):
         self.bot = bot
-    
-    @commands.Cog.listener()
+
+    @Cog.listener()
     async def on_message_delete(self, message):
         if message.author.id == self.bot.user.id and len(message.embeds) and message.embeds[0].title == "Battle":
             if message.guild.id in database.db["servers"] and message.channel.id in database.db["servers"][message.guild.id]["battling"]:
@@ -44,8 +49,8 @@ class Battle(commands.Cog):
                 user = await self.bot.fetch_user(userid)
                 await send_embed(message.channel, "Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user)
                 database.db["servers"][message.guild.id]["battling"].remove(message.channel.id)
-    
-    @commands.Cog.listener()
+
+    @Cog.listener()
     async def on_bulk_message_delete(self, messages):
         for message in messages:
             if message.author.id == self.bot.user.id and len(message.embeds) and message.embeds[0].title == "Battle":
@@ -57,12 +62,10 @@ class Battle(commands.Cog):
                     database.db["servers"][message.guild.id]["battling"].remove(message.channel.id)
                     return
 
-    @cog_ext.cog_slash(
-        name="battle", description="Test battle",
-        guild_ids=main_server)
+    @slash_command(name="battle", description="Test battle", guild_only=True)
     @remove_channel_from_db
     @check_start
-    async def battle(self, ctx: SlashContext):
+    async def battle(self, ctx: ApplicationContext):
         # Check battling status
         if ctx.guild.id not in database.db["servers"]:
             database.db["servers"][ctx.guild.id] = {"battling": []}
@@ -104,7 +107,7 @@ class Battle(commands.Cog):
                 f"",
                 f"{caption}"
             ])
-        
+
         # uuid = [poke1["species"], poke2["species"], uuid4()]
         # def get_image_link():
         #     if poke1["species"] != uuid[0]:
@@ -113,31 +116,36 @@ class Battle(commands.Cog):
         #     elif poke2["species"] != uuid[1]:
         #         uuid[1] = poke2["species"]
         #         uuid[2] = uuid4()
-        
+
         #     return f"https://pokedis-api.herokuapp.com/image?a={poke1['species']}&b={poke2['species']}&uuid={uuid[2]}"
 
         def get_image_link():
             return f"https://pokedis-api.herokuapp.com/image?a={poke1['species']}&b={poke2['species']}"
-        
-        async def send_battle_embed(buttons=None, cpt=None):
+
+        async def send_battle_embed(view=None, cpt=None):
             embed = create_embed("Battle", get_text(cpt or caption), author=ctx.author)
             embed.set_image(url=get_image_link())
-            await msg.edit(embed=embed, components=buttons)
-        
-        async def send_battle_embed2(buttons=[], cpt=None):
-            await button_ctx.defer(edit_origin=True)
-            await send_battle_embed(buttons, cpt)
-        
+            if view is None:
+                await ctx.edit(embed=embed)
+            else:
+                if view == []:
+                    view = None
+                await ctx.edit(embed=embed, view=view)
+
+        async def send_battle_embed2(view=None, cpt=None):
+            await interaction.response.defer()
+            await send_battle_embed(view, cpt)
+
         # Battle functions
         async def player_move(move):
             idx = poke1["moves"].index(move)
             poke1["pp"][idx] -= 1
             await fight(poke1, poke2, name1, name2, move)
-        
+
         async def opp_move():
             move = poke2["moves"][random.randint(0, 3 - poke2["moves"].count(0))]
             await fight(poke2, poke1, name2, name1, move)
-        
+
         async def fight(atkpoke, defpoke, atkname, defname, selected):
             caption = f"{atkname} used __{data.movename(selected)}__!"
             num = int(atkpoke is poke2)
@@ -154,7 +162,7 @@ class Battle(commands.Cog):
                     await send_battle_embed(cpt=caption)
                     await asyncio.sleep(2)
                     return
-            
+
             # Type of move
             if data.all_move_data[str(selected)]["effect"] != 1:
                 # Physical damage
@@ -176,7 +184,7 @@ class Battle(commands.Cog):
                 await asyncio.sleep(2)
                 if defpoke["hp"] == 0:
                     return
-                
+
                 # Special move (not status)
                 if str(selected) in data.special_move_data:
                     spec_move = data.special_move_data[str(selected)]
@@ -200,7 +208,7 @@ class Battle(commands.Cog):
                                 caption += "raised!"
                             else:
                                 caption += "lowered!"
-                            
+
                             change = defpoke["stat_change"][spec_move["stat"]]
                             original = list(defpoke["stats"].values())[spec_move["stat"]]
                             if change + original <= 0:
@@ -220,7 +228,7 @@ class Battle(commands.Cog):
                     affected = (defpoke, defname)
                 else:
                     affected = (atkpoke, atkname)
-                
+
                 end = False # for whirlwind
                 if "stat" in spec_move:
                     # Stat modifier
@@ -230,7 +238,7 @@ class Battle(commands.Cog):
                         new_caption += "raised!"
                     else:
                         new_caption += "lowered!"
-                    
+
                     change = affected[0]["stat_change"][spec_move["stat"]]
                     if abs(change) > 6:
                         # Clamp to -6 and 6
@@ -250,7 +258,7 @@ class Battle(commands.Cog):
                 elif "critical" in spec_move:
                     registers[num]["crit"] = spec_move["critical"]
                     new_caption = f"{atkname}'s critical hit ratio rose!"
-                
+
                 ## Special moves (set effect to 1 and dont use anything above)
                 elif selected == 18:
                     # Whirlwind
@@ -290,17 +298,17 @@ class Battle(commands.Cog):
                     # Super fang
                     defpoke["hp"] -= min(1, defpoke["hp"] // 2)
                     new_caption = ""
-                
+
                 await send_battle_embed([], cpt=caption)
                 await asyncio.sleep(2)
                 if new_caption:
                     await send_battle_embed(cpt=new_caption)
                     await asyncio.sleep(2)
-                
+
                 if end:
                     # Whirlwind
                     raise EndCommand
-        
+
         def check_win():
             if poke2["hp"] <= 0:
                 poke2["hp"] = 0
@@ -309,7 +317,7 @@ class Battle(commands.Cog):
                 poke1["hp"] = 0
                 return 2
             return 0
-        
+
         async def apply_effect(poke, name):
             if 0 in poke["status"]:
                 dmg = poke["stats"]["hp"] // 8
@@ -341,7 +349,7 @@ class Battle(commands.Cog):
                 await send_battle_embed(cpt=caption)
                 await asyncio.sleep(2)
             return poke["hp"] == 0
-        
+
         async def apply_effects():
             ret = await apply_effect(poke1, name1)
             if ret:
@@ -351,13 +359,13 @@ class Battle(commands.Cog):
         caption = f"A wild **{data.pokename(poke2['species'])}** appeared!"
         embed = create_embed("Battle", get_text(caption), author=ctx.author)
         embed.set_image(url=get_image_link())
-        msg = await ctx.send(embed=embed)
+        interaction = await ctx.send_response(embed=embed)
         await asyncio.sleep(2)
 
         caption = f"Go, **{data.pokename(poke1['species'])}**!"
         await send_battle_embed()
         await asyncio.sleep(2)
-        
+
         run_count = 0
         has_run_away = False
         blacked_out = False
@@ -397,13 +405,12 @@ class Battle(commands.Cog):
                 caption = "Choose a Pokémon.\n\n"
                 for i, poke in enumerate(database.db["users"][ctx.author.id]["pokemon"]):
                     caption += f":{data.numbers[i]}: __{data.pokename(poke['species'])}__ **[Level {poke['level']}]** {data.get_condition(poke)} **{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\n"
-                buttons = [create_button(ButtonStyle.green, str(i + 1), disabled=len(database.db["users"][ctx.author.id]["pokemon"]) <= i or database.db["users"][ctx.author.id]["pokemon"][i]["hp"] == 0) for i in range(6)]
-                buttons = [create_actionrow(*buttons[:3]), create_actionrow(*buttons[3:])]
-                await send_battle_embed(buttons)
+                buttons = [CustomButton(style=ButtonStyle.green, label=str(i+1), disabled=len(database.db["users"][ctx.author.id]["pokemon"]) <= i or database.db["users"][ctx.author.id]["pokemon"][i]["hp"] == 0, row=0 if i < 3 else 1) for i in range(6)]
+                view = BattleView(*buttons)
+                await send_battle_embed(view)
+                await view.custom_wait(self.bot)
+                swap = database.db["users"][ctx.author.id]["pokemon"][int(view.current.label) - 1]
 
-                button_ctx = await custom_wait(self.bot, msg, buttons)
-                swap = database.db["users"][ctx.author.id]["pokemon"][int(button_ctx.component["label"]) - 1]
-                
                 # Reset pokemon stat changes and then swap
                 del poke1["stat_change"]
                 poke1 = swap
@@ -421,14 +428,16 @@ class Battle(commands.Cog):
 
             # Send first prompt
             caption = "What would you like to do?"
-            buttons = create_actionrow(
-                create_button(ButtonStyle.green, "Fight"),
-                create_button(ButtonStyle.green, "Item"),
-                create_button(ButtonStyle.green, "Pokémon"),
-                create_button(ButtonStyle.green, "Run"))
-            await send_battle_embed([buttons])
-            button_ctx = await custom_wait(self.bot, msg, [buttons])
-            action = button_ctx.component["label"]
+            buttons = [
+                CustomButton(style=ButtonStyle.green, label="Fight"),
+                CustomButton(style=ButtonStyle.green, label="Item"),
+                CustomButton(style=ButtonStyle.green, label="Pokémon"),
+                CustomButton(style=ButtonStyle.green, label="Run")
+            ]
+            view = BattleView(*buttons)
+            await send_battle_embed(view)
+            await view.custom_wait(self.bot)
+            action = view.current.label
 
             player_second_fight = True # Player fights after if block?
             if action == "Fight":
@@ -440,17 +449,17 @@ class Battle(commands.Cog):
                     selected = 165 # Struggle
                 else:
                     # Select move
-                    buttons = [create_actionrow(create_button(ButtonStyle.green, label=data.movename(move) + f" - PP {poke1['pp'][i]}/{data.all_move_data[str(move)]['pp']}", disabled=poke1['pp'][i] == 0)) for i, move in enumerate(poke1["moves"]) if move != 0]
-                    buttons.append(create_actionrow(create_button(ButtonStyle.green, label="Back")))
+                    buttons = [CustomButton(style=ButtonStyle.green, label=data.movename(move) + f" - PP {poke1['pp'][i]}/{data.all_move_data[str(move)]['pp']}", disabled=poke1['pp'][i] == 0, row=i) for i, move in enumerate(poke1["moves"]) if move != 0]
+                    buttons.append(CustomButton(style=ButtonStyle.green, label="Back", row=len(buttons)))
                     moves = {data.movename(move): move for move in poke1["moves"] if move != 0}
                     caption = "Choose a move."
-                    await send_battle_embed2(buttons)
-
-                    button_ctx = await custom_wait(self.bot, msg, buttons)
-                    await button_ctx.defer(edit_origin=True)
-                    if button_ctx.component["label"] == "Back":
+                    view = BattleView(*buttons)
+                    await send_battle_embed2(view)
+                    await view.custom_wait(self.bot)
+                    await interaction.response.defer()
+                    if view.current.label == "Back":
                         continue
-                    selected = moves[button_ctx.component["label"].split(" - ")[0]]
+                    selected = moves[view.current.label.split(" - ")[0]]
 
                 priority = poke1["stats"]["spd"] >= poke2["stats"]["spd"]
                 if priority:
@@ -464,24 +473,24 @@ class Battle(commands.Cog):
                 caption = "Choose a Pokémon.\n\n"
                 for i, poke in enumerate(database.db["users"][ctx.author.id]["pokemon"]):
                     caption += f":{data.numbers[i]}: __{data.pokename(poke['species'])}__ **[Level {poke['level']}]** {data.get_condition(poke)} **{poke['hp']} / {poke['stats']['hp']}**\n{make_hp(poke['hp'] / poke['stats']['hp'])}\n"
-                buttons = [create_button(ButtonStyle.green, str(i + 1), disabled=len(database.db["users"][ctx.author.id]["pokemon"]) <= i or database.db["users"][ctx.author.id]["pokemon"][i]["hp"] == 0) for i in range(6)]
-                buttons = [create_actionrow(*buttons[:3]), create_actionrow(*buttons[3:]), create_actionrow(create_button(ButtonStyle.green, "Back"))]
-                await send_battle_embed2(buttons)
-
-                button_ctx = await custom_wait(self.bot, msg, buttons)
-                if button_ctx.component["label"] == "Back":
+                buttons = [CustomButton(style=ButtonStyle.green, label=str(i + 1), disabled=len(database.db["users"][ctx.author.id]["pokemon"]) <= i or database.db["users"][ctx.author.id]["pokemon"][i]["hp"] == 0, row=0 if i < 3 else 1) for i in range(6)]
+                buttons.append(CustomButton(style=ButtonStyle.green, label="Back", row=2))
+                view = BattleView(*buttons)
+                await send_battle_embed2(view)
+                await view.custom_wait(self.bot)
+                if view.current.label == "Back":
                     # Defer prompt so edit() works
-                    await button_ctx.defer(edit_origin=True)
+                    await interaction.response.defer()
                     continue
-                
-                swap = database.db["users"][ctx.author.id]["pokemon"][int(button_ctx.component["label"]) - 1]
+
+                swap = database.db["users"][ctx.author.id]["pokemon"][int(view.current.label) - 1]
                 if swap == poke1:
                     # Chose pokemon that's already on the field
                     caption = f"**{data.pokename(poke1['species'])}** is already out on the field!"
                     await send_battle_embed2([])
                     await asyncio.sleep(2)
                     continue
-                
+
                 caption = f"**{data.pokename(poke1['species'])}**, return!"
                 before = time.perf_counter() # wait 2 secs while image is uploading
                 await send_battle_embed2([])
@@ -511,7 +520,7 @@ class Battle(commands.Cog):
                 auto = math.floor(poke2["stats"]["spd"] / 4) % 256
                 odds = math.floor(poke1["stats"]["spd"] * 32 / auto) + run_count * 30
                 escape = auto == 0 or random.randint(0, 255) < odds
-                
+
                 if escape:
                     has_run_away = True
                     break
@@ -519,7 +528,7 @@ class Battle(commands.Cog):
                 await send_battle_embed2()
                 await asyncio.sleep(2)
                 player_second_fight = False
-            
+
             # Opponent's turn
             await opp_move()
             outcome = check_win()
@@ -531,10 +540,10 @@ class Battle(commands.Cog):
                 outcome = check_win()
                 if outcome > 0:
                     continue
-            
+
             await apply_effects()
             outcome = check_win()
-        
+
         # After main loop
         if has_run_away:
             caption = "Got away safely!"
@@ -580,13 +589,14 @@ class Battle(commands.Cog):
                         if 0 not in poke["moves"]:
                             # Forget move
                             caption = f"{name1} is trying to learn **{movedata['name']}**, but it already knows 4 moves!\nWhich move would you like it to forget?"
-                            components = [create_actionrow(create_button(ButtonStyle.green, f"{i} - " + data.all_move_data[str(move)]["name"])) for i, move in enumerate(poke["moves"])]
-                            await send_battle_embed(components)
-                            button_ctx = await custom_wait(self.bot, msg, components)
-                            forget = int(button_ctx.component["label"][0]) - 1
+                            buttons = [CustomButton(style=ButtonStyle.green, label=f"{i + 1} - " + data.all_move_data[str(move)]["name"], row=i) for i, move in enumerate(poke["moves"])]
+                            view = BattleView(*buttons)
+                            await send_battle_embed(view)
+                            await view.custom_wait(self.bot)
+                            forget = int(view.current.label[0]) - 1
                             poke["moves"][forget] = move
                             poke["pp"][forget] = data.all_move_data[str(move)]["pp"]
-                            caption = f"{name1} forgot **{button_ctx.component['label'][4:]}** and learnt **{movedata['name']}**!"
+                            caption = f"{name1} forgot **{view.current.label[4:]}** and learnt **{movedata['name']}**!"
                             await send_battle_embed2()
                         else:
                             # Add move
@@ -596,7 +606,7 @@ class Battle(commands.Cog):
                             caption = f"{name1} learnt **{movedata['name']}**!"
                             await send_battle_embed()
                         await asyncio.sleep(2)
-            
+
             # Add cash (temporarily)
             caption = f"**{ctx.author.name}** earned **$500**!"
             await send_battle_embed()

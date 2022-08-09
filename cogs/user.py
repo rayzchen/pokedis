@@ -1,9 +1,6 @@
 from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_components import (
-    create_actionrow, create_button,create_select, create_select_option)
-from discord_slash.model import ButtonStyle
-from utils import send_embed, create_embed, database, check_start, data, make_hp, custom_wait, EndCommand, main_server
+from discord import ButtonStyle, slash_command, SelectOption
+from utils import CustomView, CustomSelect, CustomButton, format_traceback, send_embed, create_embed, database, check_start, data, make_hp, EndCommand
 import asyncio
 import math
 
@@ -25,56 +22,54 @@ start_text2 = [
 class User(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
-    @cog_ext.cog_slash(
-        name="start", description="Start your Pokémon journey!",
-        guild_ids=main_server)
-    async def start(self, ctx: SlashContext):
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, err):
+        error = format_traceback(err, False)
+        await ctx.send("There was an error processing the command:\n" + error)
+
+    @slash_command(name="start", description="Start your Pokémon journey!")
+    async def start(self, ctx):
         try:
             if ctx.author.id in database.db["users"]:
                 await send_embed(ctx, "Error", "You have already started PokéDis!", author=ctx.author)
                 return
-            buttons = create_actionrow(
-                create_button(style=ButtonStyle.green, label="Talk"))
+            view = CustomView(CustomButton(style=ButtonStyle.green, label="Talk"))
             msg = await send_embed(
-                ctx, "Start", "Talk to Professor Oak.", author=ctx.author, components=[buttons])
-            button_ctx = await custom_wait(self.bot, msg, buttons)
+                ctx, "Start", "Talk to Professor Oak.", author=ctx.author, view=view)
+            await view.custom_wait(self.bot)
 
             for line in start_text:
-                buttons = create_actionrow(
-                    create_button(style=ButtonStyle.green, label="Continue"))
+                view = CustomView(CustomButton(style=ButtonStyle.green, label="Continue"))
                 embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
-                await button_ctx.edit_origin(embed=embed, components=[buttons])
-                button_ctx = await custom_wait(self.bot, msg, buttons)
-            
-            buttons = create_actionrow(
-                create_button(style=ButtonStyle.green, label="Continue"))
+                await ctx.response.edit_message(embed=embed, view=view)
+                await view.custom_wait(self.bot)
+
             embed = create_embed("Professor Oak", "OAK - **" + ctx.author.name.upper() + "**!", author=ctx.author)
-            await button_ctx.edit_origin(embed=embed, components=[buttons])
-            button_ctx = await custom_wait(self.bot, msg, buttons)
+            await ctx.response.edit_message(embed=embed)
+            await view.custom_wait(self.bot)
 
             for line in start_text2:
-                buttons = create_actionrow(
-                    create_button(style=ButtonStyle.green, label="Continue"))
                 embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
-                await button_ctx.edit_origin(embed=embed, components=[buttons])
-                button_ctx = await custom_wait(self.bot, msg, buttons)
+                await ctx.response.edit_message(embed=embed)
+                await view.custom_wait(self.bot)
         except EndCommand:
             await ctx.reply("Player creation cancelled.")
             return
         except:
             raise
-        
-        starters = ["Bulbasaur", "Charmander", "Squirtle"]
 
-        buttons = create_actionrow(*[
-            create_button(style=ButtonStyle.green, label=p) for p in starters])
+        starters = ["Bulbasaur", "Charmander", "Squirtle"]
+        starterids = [1, 4, 7]
+
+        buttons = [CustomButton(style=ButtonStyle.green, label=p) for p in starters]
+        view = CustomView(*buttons)
         embed = create_embed("Starter Pokémon",
             "Which Pokémon would you like to select?\n\n1. __Bulbasaur__\nType: **Grass**\n\n2. __Charmnder__\nType: **Fire**\n\n3. __Squirtle__\nType: **Water**")
-        await button_ctx.edit_origin(embed=embed, components=[buttons])
-        button_ctx = await custom_wait(self.bot, msg, buttons)
+        await ctx.response.edit_message(embed=embed, view=view)
+        await view.custom_wait(self.bot)
 
-        pokemon = data.gen_pokemon(starters.index(button_ctx.component["label"]) * 3 + 1, 5)
+        pokemon = data.gen_pokemon(starterids[starters.index(view.current.label)], 5)
         user = {
             "inventory": [],
             "pc": [{"name": "Potion", "count": 1}],
@@ -84,33 +79,28 @@ class User(commands.Cog):
         }
         database.db["users"][ctx.author.id] = user
 
-        buttons = create_actionrow(*[
-            create_button(style=ButtonStyle.green, label=p, disabled=True) for p in starters])
-        embed = create_embed("Starter Pokémon", f"You have chosen __{button_ctx.component['label']}__ as your starter!")
-        await button_ctx.edit_origin(embed=embed, components=[buttons])
-    
-    @cog_ext.cog_slash(
-        name="delete", description="Delete your account",
-        guild_ids=main_server)
+        view.disable_all_items()
+        embed = create_embed("Starter Pokémon", f"You have chosen __{view.current.label}__ as your starter!")
+        await ctx.response.edit_message(embed=embed, view=view)
+
+    @slash_command(name="delete", description="Delete your account")
     @check_start
-    async def delete(self, ctx: SlashContext):
-        buttons = create_actionrow(
-            create_button(style=ButtonStyle.green, label="No"),
-            create_button(style=ButtonStyle.green, label="Yes"))
-        msg = await send_embed(ctx, "Delete", "Are you sure you want to delete your account?\nThis process cannot be undone.", author=ctx.author, components=[buttons])
-        button_ctx = await custom_wait(self.bot, msg, buttons)
-        if button_ctx.component["label"] == "Yes":
+    async def delete(self, ctx):
+        buttons = [CustomButton(style=ButtonStyle.green, label="No"),
+                   CustomButton(style=ButtonStyle.green, label="Yes")]
+        view = CustomView(*buttons)
+        await send_embed(ctx, "Delete", "Are you sure you want to delete your account?\nThis process cannot be undone.", author=ctx.author, view=view)
+        await view.custom_wait(self.bot)
+        if view.current.label == "Yes":
             database.db["users"].pop(ctx.author.id)
             embed = create_embed("Delete", "Deleted account. You can restart with `/start`.")
         else:
             embed = create_embed("Delete", "Cancelled deleting account.")
-        await button_ctx.edit_origin(embed=embed, components=[])
+        await ctx.response.edit(embed=embed, view=None)
 
-    @cog_ext.cog_slash(
-        name="use", description="Use an item in your inventory",
-        guild_ids=main_server)
+    @slash_command(name="use", description="Use an item in your inventory")
     @check_start
-    async def use(self, ctx: SlashContext, item):
+    async def use(self, ctx, item):
         name = " ".join(map(str.capitalize, item.rstrip().lstrip().lower().split(" ")))
         if name not in data.items:
             await send_embed(ctx, "Error", f"Item __{name}__ does not exist!", author=ctx.author)
@@ -133,16 +123,18 @@ class User(commands.Cog):
 
         await send_embed(ctx, "Item", f"Used '__{name}__'", author=ctx.author)
 
-    @cog_ext.cog_slash(
-        name="pc", description="Store and withdraw items from Bill's PC", guild_ids=main_server)
+    @slash_command(name="pc", description="Store and withdraw items from Bill's PC")
     @check_start
-    async def pc(self, ctx: SlashContext):
+    async def pc(self, ctx):
         page = 1
-        button_ctx = None
-        row2 = create_actionrow(
-            create_button(ButtonStyle.green, "Deposit"),
-            create_button(ButtonStyle.green, "Withdraw"),
-            create_button(ButtonStyle.green, "Quit"))
+        first = True
+        buttons = [
+            CustomButton(style=ButtonStyle.green, label="◀"),
+            CustomButton(style=ButtonStyle.green, label="▶"),
+            CustomButton(style=ButtonStyle.green, row=1, label="Deposit"),
+            CustomButton(style=ButtonStyle.green, row=1, label="Withdraw"),
+            CustomButton(style=ButtonStyle.green, row=1, label="Quit")
+        ]
         while True:
             if len(database.db['users'][ctx.author.id]['pc']) == 0:
                 page = 0
@@ -151,134 +143,101 @@ class User(commands.Cog):
             viewing = database.db["users"][ctx.author.id]["pc"][(page - 1) * 10: page * 10]
             length = math.ceil(len(database.db['users'][ctx.author.id]['pc']) / 10)
             embed = create_embed("Bill's PC", "Here are your current items: \n\n" + "\n".join(["__" + item["name"] + "__ **(x" + str(item["count"]) + ")**" for item in viewing]), footer=f"Page {page} of {length}", author=ctx.author)
-            buttons = create_actionrow(
-                create_button(ButtonStyle.green, "◀", disabled=page < 2),
-                create_button(ButtonStyle.green, "▶", disabled=page == length))
-            if button_ctx is None:
-                msg = await ctx.send(embed=embed, components=[buttons, row2])
+            buttons[0].disabled = page < 2
+            buttons[1].disabled = page == length
+            view = CustomView(*buttons)
+            if first:
+                await ctx.send_response(embed=embed, view=view)
+                first = False
             else:
-                await button_ctx.edit_origin(embed=embed, components=[buttons, row2])
-            button_ctx = await custom_wait(self.bot, msg, [buttons, row2])
-            if button_ctx.component["label"] == "Quit":
-                for component in buttons["components"]:
-                    component["disabled"] = True
-                for component in row2["components"]:
-                    component["disabled"] = True
-                await button_ctx.edit_origin(components=[buttons, row2])
-                break
-            if button_ctx.component["label"] == "◀":
+                await ctx.response.edit_message(embed=embed, view=view)
+            await view.custom_wait(self.bot)
+            if view.current.label == "Quit":
+                view.disable_all_items()
+                await ctx.response.edit_message(view=view)
+                raise EndCommand
+            if view.current.label == "◀":
                 page -= 1
-            elif button_ctx.component["label"] == "▶":
+            elif view.current.label == "▶":
                 page += 1
-            elif button_ctx.component["label"] == "Deposit":
+            elif view.current.label == "Deposit" or view.current.label == "Withdraw":
+                if view.current.label == "Deposit":
+                    verb = "deposit"
+                    storage = "inventory"
+                    other = "pc"
+                    verb_past = "Deposited"
+                    direction = "to"
+                else:
+                    verb = "withdraw"
+                    storage = "pc"
+                    other = "inventory"
+                    verb_past = "Withdrew"
+                    direction = "from"
+
                 description = embed.description
-                if len(database.db["users"][ctx.author.id]["inventory"]) == 0:
+                if len(database.db["users"][ctx.author.id][storage]) == 0:
                     embed.description += "\n\nYou have no items!"
-                    buttons = create_actionrow(create_button(ButtonStyle.green, "OK"))
-                    await button_ctx.edit_origin(embed=embed, components=[buttons])
-                    button_ctx = await custom_wait(self.bot, msg, buttons)
+                    button = CustomButton(style=ButtonStyle.green, label="OK")
+                    view = CustomView(button)
+                    await ctx.response.edit_message(embed=embed, view=view)
+                    await view.custom_wait(self.bot)
                     embed.description = description
                     continue
                 buttons = [
-                    create_actionrow(create_button(ButtonStyle.green, "Cancel")),
-                    create_actionrow(create_select(
-                        options=[create_select_option(item["name"], str(i)) for i, item in enumerate(database.db["users"][ctx.author.id]["inventory"])],
-                        placeholder="Choose item",
-                        min_values=1
-                    ))
+                    CustomButton(style=ButtonStyle.green, label="Cancel"),
+                    CustomSelect(
+                        row=1,
+                        options=[SelectOption(label=item["name"], value=str(i)) for i, item in enumerate(database.db["users"][ctx.author.id][storage])],
+                        placeholder="Choose item"
+                    )
                 ]
-                embed.description += "\n\nChoose an item to deposit."
-                await button_ctx.edit_origin(embed=embed, components=buttons)
-                button_ctx = await custom_wait(self.bot, msg, buttons)
-                if button_ctx.selected_options is not None:
-                    item = int(button_ctx.selected_options[0])
-                    itemdata = database.db["users"][ctx.author.id]["inventory"][item]
+                embed.description += f"\n\nChoose an item to {verb}."
+                view = CustomView(*buttons)
+                await ctx.response.edit_message(embed=embed, view=view)
+                await view.custom_wait(self.bot)
+                if isinstance(view.current, CustomSelect):
+                    item = int(view.current.values[0])
+                    itemdata = database.db["users"][ctx.author.id][storage][item]
                     amount = 1
                     while True:
-                        embed.description = description + f"\n\nHow many **{itemdata['name']}**s do you want to deposit?\nNumber: {amount}"
-                        buttons = create_actionrow(create_button(ButtonStyle.green, "-", disabled=amount == 1), create_button(ButtonStyle.green, "+", disabled=amount == itemdata["count"]), create_button(ButtonStyle.green, "Confirm"))
-                        await button_ctx.edit_origin(embed=embed, components=[buttons])
-                        button_ctx = await custom_wait(self.bot, msg, [buttons])
-                        if button_ctx.component["label"] == "+":
+                        embed.description = description + f"\n\nHow many **{itemdata['name']}**s do you want to {verb}?\nNumber: {amount}"
+                        buttons = [
+                            CustomButton(style=ButtonStyle.green, label="-", disabled=amount == 1),
+                            CustomButton(style=ButtonStyle.green, label="+", disabled=amount == itemdata["count"]),
+                            CustomButton(style=ButtonStyle.green, label="Confirm")
+                        ]
+                        view = CustomView(*buttons)
+                        await ctx.response.edit_message(embed=embed, components=[buttons])
+                        await view.custom_wait(self.bot)
+                        if view.current.label == "+":
                             amount += 1
-                        elif button_ctx.component["label"] == "=":
+                        elif view.current.label == "=":
                             amount -= 1
                         else:
                             break
-                    buttons = create_actionrow(create_button(ButtonStyle.green, "OK"))
+                    button = CustomButton(style=ButtonStyle.green, label="OK")
+                    view = CustomView(*button)
                     pc_item = None
-                    for stored in database.db["users"][ctx.author.id]["pc"]:
+                    for stored in database.db["users"][ctx.author.id][other]:
                         if stored["name"] == itemdata["name"]:
                             pc_item = stored
                     if pc_item is None:
-                        database.db["users"][ctx.author.id]["pc"].append({"name": itemdata["name"], "count": amount})
+                        database.db["users"][ctx.author.id][other].append({"name": itemdata["name"], "count": amount})
                     else:
                         stored["count"] += amount
                     itemdata["count"] -= amount
                     if itemdata["count"] == 0:
                         database.db["users"][ctx.author.id]["inventory"].pop(item)
-                    embed.description = "Here are your current items: \n\n" + "\n".join(["__" + item["name"] + "__ **(x" + str(item["count"]) + ")**" for item in viewing]) + f"\n\nDeposited {amount} **{itemdata['name']}**" + ("s" if itemdata["count"] > 1 else "") + " to the PC."
-                    await button_ctx.edit_origin(embed=embed, components=[buttons])
-                    button_ctx = await custom_wait(self.bot, msg, [buttons])
-            elif button_ctx.component["label"] == "Withdraw":
-                description = embed.description
-                if len(database.db["users"][ctx.author.id]["pc"]) == 0:
-                    embed.description += "\n\nThe PC has no items!"
-                    buttons = create_actionrow(create_button(ButtonStyle.green, "OK"))
-                    await button_ctx.edit_origin(embed=embed, components=[buttons])
-                    button_ctx = await custom_wait(self.bot, msg, buttons)
-                    embed.description = description
-                    continue
-                buttons = [
-                    create_actionrow(create_button(ButtonStyle.green, "Cancel")),
-                    create_actionrow(create_select(
-                        options=[create_select_option(item["name"], str(i)) for i, item in enumerate(database.db["users"][ctx.author.id]["pc"])],
-                        placeholder="Choose item",
-                        min_values=1
-                    ))
-                ]
-                embed.description += "\n\nChoose an item to withdraw."
-                await button_ctx.edit_origin(embed=embed, components=buttons)
-                button_ctx = await custom_wait(self.bot, msg, buttons)
-                if button_ctx.selected_options is not None:
-                    item = int(button_ctx.selected_options[0])
-                    itemdata = database.db["users"][ctx.author.id]["pc"][item]
-                    amount = 1
-                    while True:
-                        embed.description = description + f"\n\nHow many **{itemdata['name']}**s do you want to withdraw?\nNumber: {amount}"
-                        buttons = create_actionrow(create_button(ButtonStyle.green, "-", disabled=amount == 1), create_button(ButtonStyle.green, "+", disabled=amount == itemdata["count"]), create_button(ButtonStyle.green, "Confirm"))
-                        await button_ctx.edit_origin(embed=embed, components=[buttons])
-                        button_ctx = await custom_wait(self.bot, msg, [buttons])
-                        if button_ctx.component["label"] == "+":
-                            amount += 1
-                        elif button_ctx.component["label"] == "=":
-                            amount -= 1
-                        else:
-                            break
-                    buttons = create_actionrow(create_button(ButtonStyle.green, "OK"))
-                    inv_item = None
-                    for stored in database.db["users"][ctx.author.id]["inventory"]:
-                        if stored["name"] == itemdata["name"]:
-                            inv_item = stored
-                    if inv_item is None:
-                        database.db["users"][ctx.author.id]["inventory"].append({"name": itemdata["name"], "count": amount})
-                    else:
-                        stored["count"] += amount
-                    itemdata["count"] -= amount
-                    if itemdata["count"] == 0:
-                        database.db["users"][ctx.author.id]["pc"].pop(item)
-                    embed.description = "Here are your current items: \n\n" + "\n".join(["__" + item["name"] + "__ **(x" + str(item["count"]) + ")**" for item in viewing]) + f"\n\nWithdrew {amount} **{itemdata['name']}**" + ("s" if itemdata["count"] > 1 else "") + " from the PC."
-                    await button_ctx.edit_origin(embed=embed, components=[buttons])
-                    button_ctx = await custom_wait(self.bot, msg, [buttons])
+                    embed.description = "Here are your current items: \n\n" + "\n".join(["__" + item["name"] + "__ **(x" + str(item["count"]) + ")**" for item in viewing]) + f"\n\n{verb_past} {amount} **{itemdata['name']}**" + ("s" if itemdata["count"] > 1 else "") + f" {direction} the PC."
+                    await ctx.response.edit_message(embed=embed, view=view)
+                    await view.custom_wait(self.bot)
 
-    @cog_ext.cog_slash(
-        name="pokemon", description="View your Pokémon",
-        guild_ids=main_server)
+    @slash_command(name="pokemon", description="View your Pokémon")
     @check_start
-    async def pokemon(self, ctx: SlashContext):
+    async def pokemon(self, ctx):
         page = 0
         msg = None
-        button_ctx = None
+        view = None
         while True:
             text = ""
             poke = database.db["users"][ctx.author.id]["pokemon"][page]
@@ -291,27 +250,27 @@ class User(commands.Cog):
                     break
                 text += f"**{data.movename(poke['moves'][i])}** - PP __{poke['pp'][i]} / {data.all_move_data[str(poke['moves'][i])]['pp']}__\n"
 
-            buttons = create_actionrow(
-                create_button(ButtonStyle.green, "◀", disabled=page < 1),
-                create_button(ButtonStyle.green, "▶", disabled=page == len(database.db["users"][ctx.author.id]["pokemon"]) - 1))
-            
+            buttons = [
+                CustomButton(style=ButtonStyle.green, label="◀", disabled=page < 1),
+                CustomButton(style=ButtonStyle.green, label="▶", disabled=page == len(database.db["users"][ctx.author.id]["pokemon"]) - 1)
+            ]
+            view = CustomView(*buttons)
+
             embed = create_embed("Pokémon", text, footer=f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon", author=ctx.author)
             embed.set_image(url="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/" + str(poke["species"]) + ".png")
             if msg is None:
-                msg = await ctx.send(embed=embed, components=[buttons])
+                msg = await ctx.send_response(embed=embed, view=view)
             else:
-                await button_ctx.edit_origin(embed=embed, components=[buttons])
-            button_ctx = await custom_wait(self.bot, msg, [buttons])
-            if button_ctx.component["label"] == "◀":
+                await ctx.response.edit_message(embed=embed, view=view)
+            await view.custom_wait(self.bot)
+            if view.current.label == "◀":
                 page -= 1
-            elif button_ctx.component["label"] == "▶":
+            elif view.current.label == "▶":
                 page += 1
-    
-    @cog_ext.cog_slash(
-        name="restore", description="Visit the Pokémon Center",
-        guild_ids=main_server)
+
+    @slash_command(name="restore", description="Visit the Pokémon Center")
     @check_start
-    async def restore(self, ctx: SlashContext):
+    async def restore(self, ctx):
         for poke in database.db["users"][ctx.author.id]["pokemon"]:
             poke["status"] = []
             poke["hp"] = poke["stats"]["hp"]
@@ -320,9 +279,9 @@ class User(commands.Cog):
                 if poke["moves"][i] == 0:
                     break
                 poke["pp"][i] = data.all_move_data[str(poke["moves"][i])]["pp"]
-        msg = await send_embed(ctx, "Pokémon Center", "Healing Pokémon...", author=ctx.author)
+        interaction = await send_embed(ctx, "Pokémon Center", "Healing Pokémon...", author=ctx.author)
         await asyncio.sleep(2)
-        await msg.edit(embed=create_embed("Pokémon Center", "Healed your Pokémon!\nWe hope to see you soon!", author=ctx.author))
+        await interaction.edit_original_message(embed=create_embed("Pokémon Center", "Healed your Pokémon!\nWe hope to see you soon!", author=ctx.author))
 
 def setup(bot):
     bot.add_cog(User(bot))
