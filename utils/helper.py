@@ -3,6 +3,7 @@ from discord.ui import View, Button, Select
 import discord
 import inspect
 import traceback
+import asyncio
 import os
 
 main_server = [894254591858851871]
@@ -15,6 +16,7 @@ if "NO_MAIN_SERVER" in os.environ:
 class CustomView(View):
     def __init__(self, *buttons):
         super(CustomView, self).__init__(*buttons, timeout=60)
+        self.event = asyncio.Event()
         self.current = None
         self.bot = None
 
@@ -27,18 +29,20 @@ class CustomView(View):
 
     async def custom_wait(self, bot):
         self.bot = bot
-        timed_out = await self.wait()
-        if timed_out:
+        await self.event.wait()
+        if self.is_finished():
             self.disable_all_items()
             raise EndCommand
 
 class CustomButton(Button):
     async def callback(self, interaction):
         self.view.current = self
+        self.view.event.set()
 
 class CustomSelect(Select):
     async def callback(self, interaction):
         self.view.current = self
+        self.view.event.set()
 
 def get_prefix(bot, ctx):
     return "p!"
