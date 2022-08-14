@@ -1,5 +1,5 @@
-from discord.ext import commands
-from discord import ButtonStyle, slash_command, SelectOption
+from discord.ext import commands # upm packge(pycord)
+from discord import ButtonStyle, slash_command, SelectOption # upm packge(pycord)
 from utils import CustomView, CustomSelect, CustomButton, format_traceback, send_embed, create_embed, database, check_start, data, make_hp, EndCommand
 import asyncio
 import math
@@ -42,17 +42,17 @@ class User(commands.Cog):
             for line in start_text:
                 view = CustomView(CustomButton(style=ButtonStyle.green, label="Continue"))
                 embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
-                await ctx.response.edit_message(embed=embed, view=view)
+                interaction = await ctx.response.edit_message(embed=embed, view=view)
                 await view.custom_wait(self.bot)
 
             embed = create_embed("Professor Oak", "OAK - **" + ctx.author.name.upper() + "**!", author=ctx.author)
-            await ctx.response.edit_message(embed=embed)
-            await view.custom_wait(self.bot)
+            await interaction.edit_original_message(embed=embed)
+            interaction = await view.custom_wait(self.bot)
 
             for line in start_text2:
                 embed = create_embed("Professor Oak", "OAK - " + delim.join(line), author=ctx.author)
-                await ctx.response.edit_message(embed=embed)
-                await view.custom_wait(self.bot)
+                await interaction.edit_original_message(embed=embed)
+                interaction = await view.custom_wait(self.bot)
         except EndCommand:
             await ctx.reply("Player creation cancelled.")
             return
@@ -66,8 +66,8 @@ class User(commands.Cog):
         view = CustomView(*buttons)
         embed = create_embed("Starter Pokémon",
             "Which Pokémon would you like to select?\n\n1. __Bulbasaur__\nType: **Grass**\n\n2. __Charmnder__\nType: **Fire**\n\n3. __Squirtle__\nType: **Water**")
-        await ctx.response.edit_message(embed=embed, view=view)
-        await view.custom_wait(self.bot)
+        await interaction.edit_original_message(embed=embed, view=view)
+        interaction = await view.custom_wait(self.bot)
 
         pokemon = data.gen_pokemon(starterids[starters.index(view.current.label)], 5)
         user = {
@@ -81,7 +81,7 @@ class User(commands.Cog):
 
         view.disable_all_items()
         embed = create_embed("Starter Pokémon", f"You have chosen __{view.current.label}__ as your starter!")
-        await ctx.response.edit_message(embed=embed, view=view)
+        await interaction.edit_original_message(embed=embed, view=view)
 
     @slash_command(name="delete", description="Delete your account")
     @check_start
@@ -89,14 +89,14 @@ class User(commands.Cog):
         buttons = [CustomButton(style=ButtonStyle.green, label="No"),
                    CustomButton(style=ButtonStyle.green, label="Yes")]
         view = CustomView(*buttons)
-        await send_embed(ctx, "Delete", "Are you sure you want to delete your account?\nThis process cannot be undone.", author=ctx.author, view=view)
+        interaction = await send_embed(ctx, "Delete", "Are you sure you want to delete your account?\nThis process cannot be undone.", author=ctx.author, view=view)
         await view.custom_wait(self.bot)
         if view.current.label == "Yes":
             database.db["users"].pop(ctx.author.id)
             embed = create_embed("Delete", "Deleted account. You can restart with `/start`.")
         else:
             embed = create_embed("Delete", "Cancelled deleting account.")
-        await ctx.response.edit(embed=embed, view=None)
+        await interaction.edit_original_message(embed=embed, view=None)
 
     @slash_command(name="use", description="Use an item in your inventory")
     @check_start
@@ -127,7 +127,7 @@ class User(commands.Cog):
     @check_start
     async def pc(self, ctx):
         page = 1
-        first = True
+        interaction = None
         buttons = [
             CustomButton(style=ButtonStyle.green, label="◀"),
             CustomButton(style=ButtonStyle.green, label="▶"),
@@ -146,15 +146,14 @@ class User(commands.Cog):
             buttons[0].disabled = page < 2
             buttons[1].disabled = page == length
             view = CustomView(*buttons)
-            if first:
+            if interaction is None:
                 await ctx.send_response(embed=embed, view=view)
-                first = False
             else:
-                await ctx.response.edit_message(embed=embed, view=view)
-            await view.custom_wait(self.bot)
+                await interaction.edit_original_message(embed=embed, view=view)
+            interaction = await view.custom_wait(self.bot)
             if view.current.label == "Quit":
                 view.disable_all_items()
-                await ctx.response.edit_message(view=view)
+                await interaction.edit_original_message(view=view)
                 raise EndCommand
             if view.current.label == "◀":
                 page -= 1
@@ -179,8 +178,8 @@ class User(commands.Cog):
                     embed.description += "\n\nYou have no items!"
                     button = CustomButton(style=ButtonStyle.green, label="OK")
                     view = CustomView(button)
-                    await ctx.response.edit_message(embed=embed, view=view)
-                    await view.custom_wait(self.bot)
+                    await interaction.edit_original_message(embed=embed, view=view)
+                    interaction = await view.custom_wait(self.bot)
                     embed.description = description
                     continue
                 buttons = [
@@ -193,8 +192,8 @@ class User(commands.Cog):
                 ]
                 embed.description += f"\n\nChoose an item to {verb}."
                 view = CustomView(*buttons)
-                await ctx.response.edit_message(embed=embed, view=view)
-                await view.custom_wait(self.bot)
+                await interaction.edit_original_message(embed=embed, view=view)
+                interaction = await view.custom_wait(self.bot)
                 if isinstance(view.current, CustomSelect):
                     item = int(view.current.values[0])
                     itemdata = database.db["users"][ctx.author.id][storage][item]
@@ -207,8 +206,8 @@ class User(commands.Cog):
                             CustomButton(style=ButtonStyle.green, label="Confirm")
                         ]
                         view = CustomView(*buttons)
-                        await ctx.response.edit_message(embed=embed, components=[buttons])
-                        await view.custom_wait(self.bot)
+                        await interaction.edit_original_message(embed=embed, view=view)
+                        interaction = await view.custom_wait(self.bot)
                         if view.current.label == "+":
                             amount += 1
                         elif view.current.label == "=":
@@ -229,14 +228,14 @@ class User(commands.Cog):
                     if itemdata["count"] == 0:
                         database.db["users"][ctx.author.id]["inventory"].pop(item)
                     embed.description = "Here are your current items: \n\n" + "\n".join(["__" + item["name"] + "__ **(x" + str(item["count"]) + ")**" for item in viewing]) + f"\n\n{verb_past} {amount} **{itemdata['name']}**" + ("s" if itemdata["count"] > 1 else "") + f" {direction} the PC."
-                    await ctx.response.edit_message(embed=embed, view=view)
-                    await view.custom_wait(self.bot)
+                    await interaction.edit_original_message(embed=embed, view=view)
+                    interaction = await view.custom_wait(self.bot)
 
     @slash_command(name="pokemon", description="View your Pokémon")
     @check_start
     async def pokemon(self, ctx):
         page = 0
-        msg = None
+        interaction = None
         view = None
         while True:
             text = ""
@@ -258,11 +257,11 @@ class User(commands.Cog):
 
             embed = create_embed("Pokémon", text, footer=f"{len(database.db['users'][ctx.author.id]['pokemon'])} Pokémon", author=ctx.author)
             embed.set_image(url="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/" + str(poke["species"]) + ".png")
-            if msg is None:
-                msg = await ctx.send_response(embed=embed, view=view)
+            if interaction is None:
+                interaction = await ctx.send_response(embed=embed, view=view)
             else:
-                await ctx.response.edit_message(embed=embed, view=view)
-            await view.custom_wait(self.bot)
+                await interaction.edit_original_message(embed=embed, view=view)
+            interaction = await view.custom_wait(self.bot)
             if view.current.label == "◀":
                 page -= 1
             elif view.current.label == "▶":

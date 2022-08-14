@@ -8,7 +8,7 @@ if sys.platform.startswith("win"):
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
-from discord import AutoShardedBot
+from discord import AutoShardedBot # upm packge(pycord)
 
 if os.path.isfile(".token"):
     print("Loading token")

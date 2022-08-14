@@ -1,6 +1,6 @@
 from . import database
-from discord.ui import View, Button, Select
-import discord
+from discord.ui import View, Button, Select # upm packge(pycord)
+import discord # upm packge(pycord)
 import inspect
 import traceback
 import asyncio
@@ -18,6 +18,7 @@ class CustomView(View):
         super(CustomView, self).__init__(*buttons, timeout=60)
         self.event = asyncio.Event()
         self.current = None
+        self.interaction = None
         self.bot = None
 
     async def interaction_check(self, interaction):
@@ -33,14 +34,18 @@ class CustomView(View):
         if self.is_finished():
             self.disable_all_items()
             raise EndCommand
+        await self.interaction.response.defer()
+        return self.interaction
 
 class CustomButton(Button):
     async def callback(self, interaction):
+        self.view.interaction = interaction
         self.view.current = self
         self.view.event.set()
 
 class CustomSelect(Select):
     async def callback(self, interaction):
+        self.view.interaction = interaction
         self.view.current = self
         self.view.event.set()
 

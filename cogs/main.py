@@ -1,6 +1,6 @@
-from discord import slash_command, ButtonStyle
-from discord.ext import commands, tasks
-from discord.ui import Button, View
+from discord import slash_command, ButtonStyle # upm packge(pycord)
+from discord.ext import commands, tasks # upm packge(pycord)
+from discord.ui import Button, View # upm packge(pycord)
 from utils import send_embed, create_embed, database, format_traceback, main_server, moderator_perms
 import os
 
