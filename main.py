@@ -24,8 +24,8 @@ def main():
             cont = bot.run()
             if not cont:
                 break
-        except Exception as e:
-            print_exc(e)
+        except Exception:
+            print_exc()
             continue
 
 if __name__ == "__main__":
