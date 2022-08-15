@@ -5,3 +5,4 @@ restart
 db.json
 .breakpoints
 venv/
+imgs/

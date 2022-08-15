@@ -1,10 +1,13 @@
 from . import database
 from discord.ui import View, Button, Select # upm packge(pycord)
+from PIL import Image # upm package(pillow)
+import urllib
 import discord # upm packge(pycord)
 import inspect
 import traceback
 import asyncio
 import os
+import io
 
 main_server = [894254591858851871]
 moderator_perms = discord.Permissions()
@@ -152,3 +155,21 @@ def format_traceback(err):
     _traceback = "".join(traceback.format_tb(err.__traceback__))
     error = f"```py\n{_traceback}{type(err).__name__}: {err}\n```"
     return error
+
+def get_image(species):
+    link = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/" + str(species) + ".png"
+    url = urllib.request.urlopen(link)
+    file = io.BytesIO(url.read())
+    return Image.open(file).convert("RGBA")
+
+def create_battle_image(a, b):
+    path = f"imgs/{a}vs{b}.png"
+    if not os.path.isfile(path):
+        img1 = get_image(a).transpose(Image.FLIP_LEFT_RIGHT)
+        img2 = get_image(b)
+        img = Image.new("RGBA", (360, 180))
+        img.paste(img1.resize((180, 180)), (0, 0))
+        img.paste(img2.resize((180, 180)), (180, 0))
+        os.makedirs("imgs", exist_ok=True)
+        img.save(path)
+    return path

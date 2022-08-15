@@ -26,10 +26,12 @@ class Main(commands.Cog):
     async def restart_checker(self):
         if os.path.isfile("stop"):
             print("Stopping")
+            self.restart_checker.stop()
             await self.bot.close()
         elif os.path.isfile("restart"):
             os.remove("restart")
             print("Restarting")
+            self.restart_checker.stop()
             await self.bot.close()
 
     @slash_command(name="restart", description="Restart the bot",

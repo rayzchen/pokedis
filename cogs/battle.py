@@ -1,11 +1,12 @@
 # https://lucid.app/lucidchart/6a31915f-042e-4dec-be20-18997ad19643/edit?beaconFlowId=81B1E0515BD675DB&invitationId=inv_997cb4a9-99c5-469c-b13a-b3065593fccd&page=0_0#
-from discord import ButtonStyle, Cog, slash_command, ApplicationContext # upm packge(pycord)
-from utils import CustomView, CustomButton, send_embed, create_embed, check_start, database, data, make_hp, EndCommand
+from discord import ButtonStyle, Cog, slash_command, ApplicationContext, File # upm packge(pycord)
+from utils import CustomView, CustomButton, send_embed, create_embed, check_start, database, data, make_hp, EndCommand, create_battle_image
 import asyncio
 import inspect
 import random
 import math
 import time
+import os
 
 class BattleView(CustomView):
     async def on_timeout(self):
@@ -121,12 +122,9 @@ class Battle(Cog):
 
         #     return f"https://pokedis-api.herokuapp.com/image?a={poke1['species']}&b={poke2['species']}&uuid={uuid[2]}"
 
-        def get_image_link():
-            return f"https://pokedis-api.herokuapp.com/image?a={poke1['species']}&b={poke2['species']}"
-
         async def send_battle_embed(view=None, cpt=None):
             embed = create_embed("Battle", get_text(cpt or caption), author=ctx.author)
-            embed.set_image(url=get_image_link())
+            embed.set_image(url="attachment://" + os.path.basename(file.filename))
             if view is None:
                 await interaction.edit_original_message(embed=embed)
             else:
@@ -353,9 +351,10 @@ class Battle(Cog):
             await apply_effect(poke2, name2)
 
         caption = f"A wild **{data.pokename(poke2['species'])}** appeared!"
+        file = File(create_battle_image(poke1['species'], poke2['species']))
         embed = create_embed("Battle", get_text(caption), author=ctx.author)
-        embed.set_image(url=get_image_link())
-        interaction = await ctx.send_response(embed=embed)
+        embed.set_image(url="attachment://" + file.filename)
+        interaction = await ctx.send_response(embed=embed, file=file)
         await asyncio.sleep(2)
 
         caption = f"Go, **{data.pokename(poke1['species'])}**!"
