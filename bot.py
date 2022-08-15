@@ -21,7 +21,7 @@ opts = {
 }
 
 if "NO_MAIN_SERVER" not in os.environ:
-    from .utils import main_server
+    from utils import main_server
     opts["debug_guilds"] = main_server
 
 bot = AutoShardedBot(**opts)
