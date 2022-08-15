@@ -1,7 +1,7 @@
 from . import database
 from discord.ui import View, Button, Select # upm packge(pycord)
 from PIL import Image # upm package(pillow)
-import urllib
+import urllib.request
 import discord # upm packge(pycord)
 import inspect
 import traceback
