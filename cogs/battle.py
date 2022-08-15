@@ -125,10 +125,7 @@ class Battle(Cog):
         async def send_battle_embed(view=None, cpt=None):
             embed = create_embed("Battle", get_text(cpt or caption), author=ctx.author)
             embed.set_image(url="attachment://" + os.path.basename(file.filename))
-            if view is None:
-                await interaction.edit_original_message(embed=embed)
-            else:
-                await interaction.edit_original_message(embed=embed, view=view)
+            await interaction.edit_original_message(embed=embed, view=view)
 
         # Battle functions
         async def player_move(move):
