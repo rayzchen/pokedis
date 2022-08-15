@@ -13,9 +13,6 @@ main_server = [894254591858851871]
 moderator_perms = discord.Permissions()
 moderator_perms.manage_guild = True
 
-if "NO_MAIN_SERVER" in os.environ:
-    main_server = None
-
 class CustomView(View):
     def __init__(self, *buttons):
         super(CustomView, self).__init__(*buttons, timeout=60)

@@ -15,9 +15,16 @@ if os.path.isfile(".token"):
     with open(".token") as f:
         os.environ["TOKEN"] = f.read().rstrip()
 
-bot = AutoShardedBot(debug_guilds=[894254591858851871],
-                     auto_sync_commands=True,
-                     loop=loop)
+opts = {
+    "auto_sync_commands": True,
+    "loop": loop
+}
+
+if "NO_MAIN_SERVER" not in os.environ:
+    from .utils import main_server
+    opts["debug_guilds"] = main_server
+
+bot = AutoShardedBot(**opts)
 
 for file in glob.glob("cogs/**/*.py", recursive=True):
     bot.load_extension(file.replace(".py", "").replace(os.path.sep, "."))
