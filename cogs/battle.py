@@ -10,6 +10,7 @@ import os
 
 class BattleView(CustomView):
     async def on_timeout(self):
+        await super(BattleView, self).on_timeout()
         if self.message is None:
             return
         userid = int(self.message.embeds[0].author.icon_url.split("/")[4])
@@ -47,10 +48,14 @@ class Battle(Cog):
     async def on_message_delete(self, message):
         if message.author.id == self.bot.user.id and len(message.embeds) and message.embeds[0].title == "Battle":
             if message.guild.id in database.db["servers"] and message.channel.id in database.db["servers"][message.guild.id]["battling"]:
-                print("Removed")
                 userid = int(message.embeds[0].author.icon_url.split("/")[4])
                 user = await self.bot.fetch_user(userid)
-                await send_embed(message.channel, "Forfeit", "You have forfeited the battle. Any HP, stats or level changes have been saved.", author=user)
+                await send_embed(message.channel,
+                                 "Forfeit",
+                                 "You have forfeited the battle. Any HP, "
+                                 "stats or level changes have been saved.",
+                                 author=user,
+                                 respond=False)
                 database.db["servers"][message.guild.id]["battling"].remove(message.channel.id)
 
     @Cog.listener()

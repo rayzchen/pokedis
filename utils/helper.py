@@ -21,6 +21,9 @@ class CustomView(View):
         self.interaction = None
         self.bot = None
 
+    async def on_timeout(self):
+        self.event.set()
+
     async def interaction_check(self, interaction):
         userid = int(interaction.message.embeds[0].author.icon_url.split("/")[4])
         return interaction.user.id == userid
